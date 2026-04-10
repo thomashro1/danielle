@@ -1014,8 +1014,10 @@ th.sortable:hover {
 .bo-alert-item {
   width: 100%;
   display: grid;
+  justify-items: start;
+  align-content: start;
   gap: 8px;
-  padding: 16px 16px 17px 14px;
+  padding: 16px 18px 17px 20px;
   border: 1px solid rgba(19, 34, 56, 0.08);
   border-radius: 20px;
   background: #ffffff;
@@ -1044,6 +1046,7 @@ th.sortable:hover {
   justify-content: flex-start;
   gap: 14px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .bo-alert-item-chip,
@@ -1082,6 +1085,7 @@ th.sortable:hover {
 
 .bo-alert-item > * {
   min-width: 0;
+  justify-self: start;
 }
 
 .bo-alert-item-title {
