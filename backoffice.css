@@ -969,10 +969,11 @@ th.sortable:hover {
 }
 
 .bo-alert-column {
-  display: grid;
-  grid-template-rows: auto minmax(0, auto);
-  align-content: start;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  align-self: start;
   gap: 14px;
   padding: 18px;
   border-radius: 24px;
@@ -1019,11 +1020,13 @@ th.sortable:hover {
 }
 
 .bo-alert-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  align-items: start;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  width: 100%;
 }
 
 .bo-alert-item {
