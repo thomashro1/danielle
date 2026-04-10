@@ -1031,6 +1031,7 @@ th.sortable:hover {
     transform 0.18s ease,
     border-color 0.18s ease,
     box-shadow 0.18s ease;
+  text-align: left !important;
 }
 
 .bo-alert-item:hover {
@@ -1085,6 +1086,11 @@ th.sortable:hover {
 .bo-alert-item > * {
   min-width: 0;
   justify-self: start;
+  text-align: left !important;
+}
+
+.bo-alert-item * {
+  text-align: left !important;
 }
 
 .bo-alert-item-title {
@@ -1125,6 +1131,12 @@ th.sortable:hover {
   display: block;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.bo-alert-item-topline > *,
+.bo-alert-item-footer > * {
+  justify-self: start;
+  align-self: start;
 }
 
 .bo-alert-empty {
