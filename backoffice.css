@@ -70,6 +70,11 @@ body.bo-route-main {
     linear-gradient(180deg, var(--bo-bg-top), var(--bo-bg-bottom) 44%, #f2f4f8 100%);
 }
 
+html:has(body.bo-dashboard-open),
+body.bo-dashboard-open {
+  overflow: hidden;
+}
+
 .app-shell,
 .auth-shell {
   width: 100%;
@@ -813,6 +818,10 @@ th.sortable:hover {
   gap: 18px;
   padding: 0 22px 22px;
   border-top: 1px solid rgba(19, 34, 56, 0.08);
+  max-height: calc(100vh - 184px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .bo-alert-radar.is-collapsed .bo-alert-radar-panel {
@@ -960,10 +969,11 @@ th.sortable:hover {
 }
 
 .bo-alert-column {
-  display: grid;
-  grid-template-rows: auto minmax(0, auto);
-  align-content: start;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  align-self: start;
   gap: 14px;
   padding: 18px;
   border-radius: 24px;
@@ -1010,11 +1020,13 @@ th.sortable:hover {
 }
 
 .bo-alert-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  align-items: start;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  width: 100%;
 }
 
 .bo-alert-item {

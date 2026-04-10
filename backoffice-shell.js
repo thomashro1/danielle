@@ -26,6 +26,10 @@
 
   function enhanceButtons(root) {
     forEachMatch(root, 'button, .app-button', (button) => {
+      if (button.classList.contains('bo-alert-item') || button.hasAttribute('data-alert-kind')) {
+        return;
+      }
+
       button.classList.add('btn');
 
       if (button.classList.contains('primary')) {
