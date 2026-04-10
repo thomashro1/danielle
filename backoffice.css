@@ -1041,11 +1041,10 @@ th.sortable:hover {
 
 .bo-alert-item-topline,
 .bo-alert-item-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 14px;
-  flex-wrap: wrap;
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 6px;
   width: 100%;
 }
 
@@ -1123,6 +1122,7 @@ th.sortable:hover {
 
 .bo-alert-item-meta,
 .bo-alert-item-footer span {
+  display: block;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
