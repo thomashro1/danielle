@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backoffice - Wiedervorlagen</title>
+  <link rel="stylesheet" href="vendor/tabler/tabler.min.css">
+  <link rel="stylesheet" href="backoffice.css">
+  <script src="vendor/tabler/tabler.min.js" defer></script>
+  <script src="backoffice-shell.js" defer></script>
+</head>
+<body data-bo-page="followups">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Wiedervorlagen</h1>
+        <span>DANIELLE Backoffice</span>
+      </div>
+      <!-- Kopf-Navigation entfernt -->
+    </header>
+
+    <main class="app-main-full">
+      <section class="app-panel">
+        <div class="card-header">
+          <h2>WIEDERVORLAGEN</h2>
+          <span>Offene und erledigte Vorgänge</span>
+        </div>
+
+        <!-- Filterzeile -->
+        <div class="section-stack" style="margin-bottom: 10px;">
+          <div class="section-inline">
+            <label>Typ
+              <select id="filter_type">
+                <option value="">Alle</option>
+              </select>
+            </label>
+            <label>Status
+              <select id="filter_status">
+                <option value="">Alle</option>
+                <option value="neu">neu</option>
+                <option value="gelesen">gelesen</option>
+                <option value="erledigt">erledigt</option>
+              </select>
+            </label>
+          </div>
+          <div class="section-inline">
+            <label>Datum von
+              <input type="date" id="filter_from">
+            </label>
+            <label>Datum bis
+              <input type="date" id="filter_to">
+            </label>
+          </div>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:2px;">
+            <input type="checkbox" id="filter_hide_done" checked style="width:auto; margin-top:0;">
+            <span>erledigte Wiedervorlagen ausblenden</span>
+          </label>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div class="help-text">
+            Die farbige Markierung entspricht dem Typ der Wiedervorlage. Status: neu, gelesen, erledigt.
+          </div>
+          <button type="button" class="primary" onclick="openFollowupDialog()">Neue Wiedervorlage</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Typ</th>
+              <th>Kunde</th>
+              <th>Notiz</th>
+              <th>Status</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="followupTableBody"></tbody>
+        </table>
+
+        <div id="message"></div>
+      </section>
+
+      <!-- Bearbeitungsdialog -->
+      <div id="followupDialog" class="dialog-overlay">
+        <div class="card dialog-card">
+          <div class="card-header">
+            <h2>WIEDERVORLAGE</h2>
+            <span>Bearbeiten / Neu</span>
+          </div>
+
+          <form id="followupForm" class="section-stack">
+            <input type="hidden" id="fu_id">
+
+            <div>
+              <label>Kunde suchen
+                <input type="text" id="fu_customer_search" placeholder="Name oder Email eingeben">
+              </label>
+              <div id="fu_customer_results" class="search-results"></div>
+              <div class="help-text" id="fu_customer_name_label"></div>
+            </div>
+
+            <div class="section-inline">
+              <label>Kunden-ID
+                <input type="number" id="fu_customer_id" required>
+              </label>
+              <label>Datum (Fällig)
+                <input type="datetime-local" id="fu_due_date" required>
+              </label>
+            </div>
+
+            <label>Typ
+              <select id="fu_type_id"></select>
+            </label>
+
+            <label>Status
+              <select id="fu_status">
+                <option value="neu">neu</option>
+                <option value="gelesen">gelesen</option>
+                <option value="erledigt">erledigt</option>
+              </select>
+            </label>
+
+            <label>Notiz
+              <textarea id="fu_note" rows="4"></textarea>
+            </label>
+
+            <label>Neues Datum (optional – erzeugt neue Wiedervorlage)
+              <input type="datetime-local" id="fu_new_due_date">
+            </label>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+              <button type="button" class="secondary" onclick="closeFollowupDialog()">Abbrechen</button>
+              <div style="display:flex; gap:8px;">
+                <button type="button" class="danger" id="btnFuDelete" style="display:none;">Löschen</button>
+                <button type="submit" class="primary">Speichern</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const apiBase = "careconnect.php";
+
+    function gotoCustomers()  { window.location.href = "backoffice_customers.html"; }
+    function gotoSettings()   { window.location.href = "backoffice_settings.html"; }
+    function gotoFollowups()  { window.location.href = "backoffice_followups.html"; }
+    function gotoKIM()        { window.open("backoffice_mail.html", "kimMail", "width=1200,height=800"); }
+
+    let followupTypes = [];
+    let followups = [];
+    let customers = [];
+
+    async function loadTypes() {
+      const res = await fetch(apiBase + "?action=followup_types_list", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Typen";
+        return;
+      }
+      followupTypes = data.types || [];
+
+      // Dropdown im Dialog
+      const sel = document.getElementById('fu_type_id');
+      sel.innerHTML = "";
+      followupTypes.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.bezeichnung;
+        sel.appendChild(opt);
+      });
+
+      // Dropdown im Filter
+      const selFilter = document.getElementById('filter_type');
+      selFilter.innerHTML = "";
+      const optAll = document.createElement('option');
+      optAll.value = "";
+      optAll.textContent = "Alle";
+      selFilter.appendChild(optAll);
+      followupTypes.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.bezeichnung;
+        selFilter.appendChild(opt);
+      });
+    }
+
+    async function loadCustomers() {
+      const res = await fetch(apiBase + "?action=customers_list", { credentials: "include" });
+      const data = await res.json();
+      if (data.success) {
+        customers = data.customers || [];
+      } else {
+        customers = [];
+      }
+    }
+
+    async function loadFollowups() {
+      const res = await fetch(apiBase + "?action=followup_list", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Wiedervorlagen";
+        return;
+      }
+      followups = data.followups || [];
+      renderFollowups();
+    }
+
+    function renderFollowups() {
+      const tbody = document.getElementById('followupTableBody');
+      tbody.innerHTML = "";
+
+      const typeFilter   = document.getElementById('filter_type').value;
+      const statusFilter = document.getElementById('filter_status').value;
+      const fromDateStr  = document.getElementById('filter_from').value;
+      const toDateStr    = document.getElementById('filter_to').value;
+      const hideDone     = document.getElementById('filter_hide_done').checked;
+
+      let fromDate = null;
+      let toDate   = null;
+      if (fromDateStr) fromDate = new Date(fromDateStr + "T00:00:00");
+      if (toDateStr)   toDate   = new Date(toDateStr   + "T23:59:59");
+
+      followups.forEach(f => {
+        let include = true;
+
+        if (typeFilter && String(f.type_id) !== String(typeFilter)) {
+          include = false;
+        }
+
+        if (statusFilter && f.status !== statusFilter) {
+          include = false;
+        }
+
+        if (hideDone && f.status === 'erledigt') {
+          include = false;
+        }
+
+        let dueDateObj = null;
+        if ((fromDate || toDate) && f.due_date) {
+          // f.due_date: "YYYY-MM-DD HH:MM:SS"
+          dueDateObj = new Date(f.due_date.replace(' ', 'T'));
+          if (fromDate && dueDateObj < fromDate) include = false;
+          if (toDate && dueDateObj > toDate) include = false;
+        }
+
+        if (!include) return;
+
+        const tr = document.createElement('tr');
+
+        // ganze Zeile mit Farbcode hinterlegen
+        const color = f.color_code || "";
+        if (color) {
+          tr.style.backgroundColor = color;
+        }
+
+        const noteShort = (f.note || "").length > 80
+          ? (f.note || "").substring(0, 77) + "..."
+          : (f.note || "");
+
+        tr.innerHTML = `
+          <td>${f.due_date || ""}</td>
+          <td>${f.typ_bezeichnung || ""}</td>
+          <td>${f.customer_name || ""}</td>
+          <td>${noteShort}</td>
+          <td>${f.status}</td>
+          <td>
+            <button type="button" onclick="openFollowupDialog(${f.id})">Bearbeiten</button>
+            <button type="button" onclick="gotoCustomer(${f.customer_id})">Kunde</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function gotoCustomer(id) {
+      window.location.href = "backoffice_customer_detail.html?id=" + encodeURIComponent(id);
+    }
+
+    function setTodayOnDueDate() {
+      const input = document.getElementById('fu_due_date');
+      const now = new Date();
+      now.setSeconds(0,0);
+      const iso = now.toISOString().slice(0,16);
+      input.value = iso;
+    }
+
+    function updateCustomerSearch() {
+      const term = document.getElementById('fu_customer_search').value.toLowerCase().trim();
+      const label = document.getElementById('fu_customer_name_label');
+      const resultsDiv = document.getElementById('fu_customer_results');
+
+      resultsDiv.innerHTML = "";
+      label.textContent = "";
+
+      if (!term) return;
+
+      const matches = customers.filter(c => {
+        const full = ((c.anrede || '') + ' ' + (c.vorname || '') + ' ' + (c.nachname || '')).toLowerCase();
+        const mail = (c.email || '').toLowerCase();
+        return full.includes(term) || mail.includes(term);
+      });
+
+      if (matches.length === 0) {
+        const div = document.createElement('div');
+        div.className = 'search-result-item disabled';
+        div.textContent = 'Kein Treffer';
+        resultsDiv.appendChild(div);
+        return;
+      }
+
+      matches.forEach(m => {
+        const name = `${m.anrede || ''} ${m.vorname || ''} ${m.nachname || ''}`.trim();
+        const div = document.createElement('div');
+        div.className = 'search-result-item';
+        div.textContent = `${name} (${m.email || 'ohne Email'}) [ID ${m.id}]`;
+        div.addEventListener('click', () => {
+          document.getElementById('fu_customer_id').value = m.id;
+          document.getElementById('fu_customer_search').value = name;
+          label.innerHTML = `Kunde: <strong>${name}</strong> (ID ${m.id})`;
+          resultsDiv.innerHTML = "";
+        });
+        resultsDiv.appendChild(div);
+      });
+
+      const first = matches[0];
+      const firstName = `${first.anrede || ''} ${first.vorname || ''} ${first.nachname || ''}`.trim();
+      document.getElementById('fu_customer_id').value = first.id;
+      label.innerHTML = `Kunde: <strong>${firstName}</strong> (ID ${first.id})`;
+    }
+
+    document.getElementById('fu_customer_search').addEventListener('input', updateCustomerSearch);
+
+    function openFollowupDialog(id = 0) {
+      const dlg = document.getElementById('followupDialog');
+      dlg.style.display = "flex";
+
+      document.getElementById('fu_id').value = id || 0;
+      document.getElementById('fu_new_due_date').value = "";
+      document.getElementById('fu_customer_search').value = "";
+      document.getElementById('fu_customer_name_label').textContent = "";
+      document.getElementById('fu_customer_results').innerHTML = "";
+
+      if (!id) {
+        document.getElementById('fu_customer_id').value = "";
+        setTodayOnDueDate();
+        document.getElementById('fu_note').value = "";
+        document.getElementById('fu_status').value = "neu";
+        const sel = document.getElementById('fu_type_id');
+        if (sel.options.length > 0) sel.selectedIndex = 0;
+        document.getElementById('btnFuDelete').style.display = "none";
+      } else {
+        const f = followups.find(x => x.id == id);
+        if (!f) return;
+        document.getElementById('fu_customer_id').value = f.customer_id;
+        const cust = customers.find(c => c.id == f.customer_id);
+        if (cust) {
+          const name = `${cust.anrede || ''} ${cust.vorname || ''} ${cust.nachname || ''}`.trim();
+          document.getElementById('fu_customer_name_label').innerHTML =
+            `Kunde: <strong>${name}</strong> (ID ${cust.id})`;
+          document.getElementById('fu_customer_search').value = name;
+        }
+        if (f.due_date) {
+          const s = f.due_date.replace(' ', 'T').substring(0,16);
+          document.getElementById('fu_due_date').value = s;
+        } else {
+          setTodayOnDueDate();
+        }
+        document.getElementById('fu_note').value = f.note || "";
+        document.getElementById('fu_status').value = f.status || "neu";
+        document.getElementById('fu_type_id').value = f.type_id;
+        document.getElementById('btnFuDelete').style.display = "inline-flex";
+      }
+    }
+
+    function closeFollowupDialog() {
+      document.getElementById('followupDialog').style.display = "none";
+    }
+
+    document.getElementById('followupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        id: document.getElementById('fu_id').value || 0,
+        customer_id: document.getElementById('fu_customer_id').value,
+        type_id: document.getElementById('fu_type_id').value,
+        due_date: document.getElementById('fu_due_date').value,
+        note: document.getElementById('fu_note').value,
+        status: document.getElementById('fu_status').value,
+        new_due_date: document.getElementById('fu_new_due_date').value
+      };
+
+      const res = await fetch(apiBase + "?action=followup_save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Speichern";
+        return;
+      }
+
+      closeFollowupDialog();
+      document.getElementById('message').textContent = "Wiedervorlage gespeichert.";
+      await loadFollowups();
+    });
+
+    document.getElementById('btnFuDelete').addEventListener('click', async () => {
+      const id = document.getElementById('fu_id').value;
+      if (!id || !confirm("Wiedervorlage wirklich löschen?")) return;
+
+      const res = await fetch(apiBase + "?action=followup_delete", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || "Fehler beim Löschen");
+        return;
+      }
+      closeFollowupDialog();
+      await loadFollowups();
+    });
+
+    function handleInitialNavigation() {
+      const params = new URLSearchParams(window.location.search);
+      const customerId = params.get('customer_id');
+      const hash = window.location.hash;
+
+      if (customerId) {
+        openFollowupDialog(0);
+        document.getElementById('fu_customer_id').value = customerId;
+        const cust = customers.find(c => c.id == customerId);
+        if (cust) {
+          const name = `${cust.anrede || ''} ${cust.vorname || ''} ${cust.nachname || ''}`.trim();
+          document.getElementById('fu_customer_name_label').innerHTML =
+            `Kunde: <strong>${name}</strong> (ID ${cust.id})`;
+          document.getElementById('fu_customer_search').value = name;
+        }
+      } else if (hash && hash.startsWith('#fu_')) {
+        const id = parseInt(hash.substring(4), 10);
+        if (id) {
+          const f = followups.find(x => x.id == id);
+          if (f) openFollowupDialog(id);
+        }
+      }
+    }
+
+    // Filter-Events
+    ['filter_type','filter_status','filter_from','filter_to','filter_hide_done'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', renderFollowups);
+      }
+    });
+
+    (async function init() {
+      await loadCustomers();
+      await loadTypes();
+      await loadFollowups();
+      handleInitialNavigation();
+    })();
+  </script>
+</body>
+</html>

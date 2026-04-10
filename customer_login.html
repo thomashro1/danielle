@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DANIELLE Kundenportal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="customer.css">
+</head>
+<body>
+  <div class="cp-shell cp-auth">
+    <main class="cp-main cp-main-auth">
+      <section class="cp-card cp-card-shadow cp-auth-card">
+        <p class="cp-subtitle">DANIELLE Kundenportal</p>
+        <h1 class="cp-auth-title">Willkommen zurueck</h1>
+        <p class="cp-intro">
+          Melden Sie sich mit Ihrer Kunden-E-Mail an, um Status, Dokumente und Anliegen mobil zu verwalten.
+        </p>
+
+        <form id="loginForm" class="cp-stack">
+          <label>
+            E-Mail
+            <input type="email" id="email" placeholder="kunde@example.com" required>
+          </label>
+          <label>
+            Passwort
+            <input type="password" id="password" placeholder="Ihr Passwort" required>
+          </label>
+          <button type="submit" class="cp-btn cp-btn-primary cp-btn-block">Anmelden</button>
+        </form>
+
+        <p id="message" class="cp-message"></p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const message = document.getElementById('message');
+      message.textContent = '';
+      message.className = 'cp-message';
+
+      const response = await fetch('careconnect.php?action=login_customer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        window.location.href = 'customer_home.html';
+        return;
+      }
+
+      message.textContent = data.error || 'Login fehlgeschlagen.';
+      message.classList.add('is-error');
+    });
+  </script>
+</body>
+</html>

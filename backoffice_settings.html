@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backoffice - Einstellungen</title>
+  <link rel="stylesheet" href="vendor/tabler/tabler.min.css">
+  <link rel="stylesheet" href="backoffice.css">
+  <script src="vendor/tabler/tabler.min.js" defer></script>
+  <script src="backoffice-shell.js" defer></script>
+</head>
+<body data-bo-page="settings">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Einstellungen</h1>
+        <span>DANIELLE Backoffice</span>
+      </div>
+      <!-- Kopf-Navigation entfernt -->
+    </header>
+
+    <main class="app-main">
+      <!-- Backoffice-Benutzerverwaltung -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Backoffice-Benutzer</h2>
+          <span>Accounts &amp; Stammdaten</span>
+        </div>
+
+        <form id="userForm" class="section-stack">
+          <input type="hidden" id="user_id" value="0">
+
+          <div class="section-inline">
+            <label>Username
+              <input type="text" id="user_username">
+            </label>
+            <label>Passwort
+              <input type="text" id="user_password">
+            </label>
+          </div>
+
+          <div class="section-inline">
+            <label>Vorname
+              <input type="text" id="user_vorname">
+            </label>
+            <label>Nachname
+              <input type="text" id="user_nachname">
+            </label>
+          </div>
+
+          <label>Adresse
+            <input type="text" id="user_adresse">
+          </label>
+
+          <div class="section-inline">
+            <label>Telefon
+              <input type="text" id="user_telefon">
+            </label>
+            <label>Email
+              <input type="email" id="user_email">
+            </label>
+          </div>
+
+          <label>Berufs-ID
+            <input type="number" id="user_berufs_id">
+          </label>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="resetUserForm()">Neu</button>
+            <button type="submit" class="primary">Benutzer speichern</button>
+          </div>
+        </form>
+
+        <table style="margin-top:14px;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Berufs-ID</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </section>
+
+      <!-- Statusverwaltung -->
+      <section class="card card-muted">
+        <div class="card-header">
+          <h2>Statusverwaltung</h2>
+          <span>Statusmaster &amp; Kennzeichnung</span>
+        </div>
+
+        <form id="statusMasterForm" class="section-stack">
+          <input type="hidden" id="status_master_id" value="0">
+
+          <label>Bezeichnung
+            <input type="text" id="status_bezeichnung">
+          </label>
+
+          <label>
+            <input type="checkbox" id="status_kundenkennung_flag">
+            &nbsp;Für Kunden sichtbar
+          </label>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="resetStatusMasterForm()">Neu</button>
+            <button type="submit" class="primary">Status speichern</button>
+          </div>
+        </form>
+
+        <table style="margin-top:14px;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Bezeichnung</th>
+              <th>Kundenkennzeichen</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="statusMasterTableBody"></tbody>
+        </table>
+
+        <div id="message"></div>
+      </section>
+
+      <section class="card card-ghost" style="grid-column:1 / -1;">
+        <div class="card-header">
+          <h2>Meldungsradar</h2>
+          <span>Live-Kopfzeile im Backoffice</span>
+        </div>
+
+        <form id="alertSettingsForm" class="section-stack">
+          <div class="section-inline">
+            <label>Wiedervorlagen ab Alter in Tagen
+              <input type="number" id="alert_followup_age_days" min="0" max="365" step="1">
+            </label>
+          </div>
+
+          <div class="help-text">
+            Neue Wiedervorlagen erscheinen in der Live-Kopfzeile, sobald sie seit mindestens X Tagen den Status "neu" haben.
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="resetAlertSettingsForm()">Zuruecksetzen</button>
+            <button type="submit" class="primary">Meldungsradar speichern</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Wiedervorlage-Typen -->
+      <section class="card card-ghost" style="grid-column:1 / -1;">
+        <div class="card-header">
+          <h2>Wiedervorlage-Typen</h2>
+          <span>Definition &amp; Farbcode</span>
+        </div>
+
+        <form id="fuTypeForm" class="section-stack">
+          <input type="hidden" id="fu_type_id" value="0">
+
+          <div class="section-inline">
+            <label>Bezeichnung
+              <input type="text" id="fu_type_bezeichnung">
+            </label>
+            <label>Farbcode (#RRGGBB)
+              <input type="text" id="fu_type_color" placeholder="#e5f0ff">
+            </label>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="resetFuTypeForm()">Neu</button>
+            <button type="submit" class="primary">Typ speichern</button>
+          </div>
+        </form>
+
+        <table style="margin-top:14px;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Bezeichnung</th>
+              <th>Farbe</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="fuTypeTableBody"></tbody>
+        </table>
+      </section>
+
+      <!-- Mailkonto -->
+      <section class="card card-ghost" style="grid-column:1 / -1;">
+        <div class="card-header">
+          <h2>Mailkonto</h2>
+          <span>Zugang &amp; Darstellung</span>
+        </div>
+
+        <form id="imapForm" class="section-stack">
+          <!-- NEU: Darstellung KIM-Mailclient -->
+          <label>Darstellung KIM-Mailclient
+            <select id="kim_view_mode">
+              <option value="panel">Andock-Panel im Backoffice (V1)</option>
+              <option value="window">Eigenes Fenster / Tab (V2)</option>
+            </select>
+          </label>
+
+          <div class="help-text">
+            V1: KIM wird im Backoffice-Fenster unter der aktuellen Ansicht angezeigt (Drag &amp; Drop zu Kunden möglich).<br>
+            V2: KIM öffnet in einem separaten Fenster/Tab.
+          </div>
+
+          <div class="section-inline" style="margin-top:8px;">
+            <label>Server
+              <input type="text" id="imap_host">
+            </label>
+            <label>Port
+              <input type="number" id="imap_port">
+            </label>
+          </div>
+
+          <div class="section-inline">
+            <label>Verschlüsselung
+              <select id="imap_encryption">
+                <option value="ssl">SSL</option>
+                <option value="tls">TLS</option>
+                <option value="none">Keine</option>
+              </select>
+            </label>
+            <label>Mailbox
+              <input type="text" id="imap_mailbox" placeholder="INBOX">
+            </label>
+          </div>
+
+          <div class="section-inline">
+            <label>Benutzername
+              <input type="text" id="imap_username">
+            </label>
+            <label>Passwort
+              <input type="password" id="imap_password">
+            </label>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="resetImapForm()">Zurücksetzen</button>
+            <button type="submit" class="primary">Mailkonto speichern</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const apiBase = "careconnect.php";
+    const KIM_VIEW_KEY = "kim_view_mode";
+
+    function gotoCustomers()  { window.location.href = "backoffice_customers.html"; }
+    function gotoSettings()   { window.location.href = "backoffice_settings.html"; }
+    function gotoFollowups()  { window.location.href = "backoffice_followups.html"; }
+    function gotoKIM()        { window.open("backoffice_mail.html", "kimMail", "width=1200,height=800"); }
+
+    // ---------- Backoffice User ----------
+    function resetUserForm() {
+      document.getElementById('user_id').value = 0;
+      document.getElementById('user_username').value = '';
+      document.getElementById('user_password').value = '';
+      document.getElementById('user_vorname').value = '';
+      document.getElementById('user_nachname').value = '';
+      document.getElementById('user_adresse').value = '';
+      document.getElementById('user_telefon').value = '';
+      document.getElementById('user_email').value = '';
+      document.getElementById('user_berufs_id').value = '';
+    }
+
+    async function loadUsers() {
+      const res = await fetch(apiBase + "?action=backoffice_users_list", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Benutzer";
+        return;
+      }
+      const tbody = document.getElementById('userTableBody');
+      tbody.innerHTML = "";
+      (data.users || []).forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${u.id}</td>
+          <td>${u.username}</td>
+          <td>${(u.vorname || '')} ${(u.nachname || '')}</td>
+          <td>${u.email || ''}</td>
+          <td>${u.berufs_id || ''}</td>
+          <td>
+            <button type="button" onclick="editUser(${u.id})">Bearbeiten</button>
+            <button type="button" class="danger" onclick="deleteUser(${u.id})">Löschen</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function editUser(id) {
+      const res = await fetch(apiBase + "?action=backoffice_user_get&id=" + encodeURIComponent(id), { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || "Fehler beim Laden des Benutzers");
+        return;
+      }
+      const u = data.user;
+      document.getElementById('user_id').value = u.id;
+      document.getElementById('user_username').value = u.username || '';
+      document.getElementById('user_password').value = u.password || '';
+      document.getElementById('user_vorname').value = u.vorname || '';
+      document.getElementById('user_nachname').value = u.nachname || '';
+      document.getElementById('user_adresse').value = u.adresse || '';
+      document.getElementById('user_telefon').value = u.telefon || '';
+      document.getElementById('user_email').value = u.email || '';
+      document.getElementById('user_berufs_id').value = u.berufs_id || '';
+    }
+
+    async function deleteUser(id) {
+      if (!confirm("Diesen Backoffice-Benutzer wirklich löschen?")) return;
+      const res = await fetch(apiBase + "?action=backoffice_user_delete", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadUsers();
+      } else {
+        alert(data.error || "Fehler beim Löschen");
+      }
+    }
+
+    document.getElementById('userForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        id: document.getElementById('user_id').value || 0,
+        username: document.getElementById('user_username').value,
+        password: document.getElementById('user_password').value,
+        vorname: document.getElementById('user_vorname').value,
+        nachname: document.getElementById('user_nachname').value,
+        adresse: document.getElementById('user_adresse').value,
+        telefon: document.getElementById('user_telefon').value,
+        email: document.getElementById('user_email').value,
+        berufs_id: document.getElementById('user_berufs_id').value
+      };
+
+      const res = await fetch(apiBase + "?action=backoffice_user_save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Benutzer gespeichert.";
+        resetUserForm();
+        loadUsers();
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler beim Speichern des Benutzers";
+      }
+    });
+
+    // ---------- Statusmaster ----------
+    function resetStatusMasterForm() {
+      document.getElementById('status_master_id').value = 0;
+      document.getElementById('status_bezeichnung').value = '';
+      document.getElementById('status_kundenkennung_flag').checked = false;
+    }
+
+    async function loadStatusMaster() {
+      const res = await fetch(apiBase + "?action=status_list", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Statusliste";
+        return;
+      }
+      const tbody = document.getElementById('statusMasterTableBody');
+      tbody.innerHTML = "";
+      (data.statuses || []).forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.bezeichnung}</td>
+          <td>${s.kundenkennung_flag ? 'Ja' : 'Nein'}</td>
+          <td>
+            <button type="button" onclick="editStatusMaster(${s.id})">Bearbeiten</button>
+            <button type="button" class="danger" onclick="deleteStatusMaster(${s.id})">Löschen</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function editStatusMaster(id) {
+      const res = await fetch(apiBase + "?action=status_list", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) return;
+      const s = (data.statuses || []).find(x => x.id == id);
+      if (!s) return;
+
+      document.getElementById('status_master_id').value = s.id;
+      document.getElementById('status_bezeichnung').value = s.bezeichnung || '';
+      document.getElementById('status_kundenkennung_flag').checked = !!s.kundenkennung_flag;
+    }
+
+    async function deleteStatusMaster(id) {
+      if (!confirm("Diesen Status wirklich löschen?")) return;
+      const res = await fetch(apiBase + "?action=status_delete", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadStatusMaster();
+      } else {
+        alert(data.error || "Fehler beim Löschen");
+      }
+    }
+
+    document.getElementById('statusMasterForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        id: document.getElementById('status_master_id').value || 0,
+        bezeichnung: document.getElementById('status_bezeichnung').value,
+        kundenkennung_flag: document.getElementById('status_kundenkennung_flag').checked ? 1 : 0
+      };
+
+      const res = await fetch(apiBase + "?action=status_save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Status gespeichert.";
+        resetStatusMasterForm();
+        loadStatusMaster();
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler beim Speichern des Status";
+      }
+    });
+
+    // ---------- Wiedervorlage-Typen ----------
+    function resetFuTypeForm() {
+      document.getElementById('fu_type_id').value = 0;
+      document.getElementById('fu_type_bezeichnung').value = '';
+      document.getElementById('fu_type_color').value = '#dde4ff';
+    }
+
+    async function loadFuTypes() {
+      const res = await fetch(apiBase + "?action=followup_types_list", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Wiedervorlage-Typen";
+        return;
+      }
+      const tbody = document.getElementById('fuTypeTableBody');
+      tbody.innerHTML = "";
+      (data.types || []).forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${t.id}</td>
+          <td>${t.bezeichnung}</td>
+          <td>
+            <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #d1d5db;background:${t.color_code};vertical-align:middle;margin-right:6px;"></span>
+            ${t.color_code}
+          </td>
+          <td>
+            <button type="button" onclick="editFuType(${t.id})">Bearbeiten</button>
+            <button type="button" class="danger" onclick="deleteFuType(${t.id})">Löschen</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function editFuType(id) {
+      const res = await fetch(apiBase + "?action=followup_types_list", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) return;
+      const t = (data.types || []).find(x => x.id == id);
+      if (!t) return;
+      document.getElementById('fu_type_id').value = t.id;
+      document.getElementById('fu_type_bezeichnung').value = t.bezeichnung || '';
+      document.getElementById('fu_type_color').value = t.color_code || '#dde4ff';
+    }
+
+    async function deleteFuType(id) {
+      if (!confirm("Diesen Wiedervorlage-Typ wirklich löschen?")) return;
+      const res = await fetch(apiBase + "?action=followup_type_delete", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadFuTypes();
+      } else {
+        alert(data.error || "Fehler beim Löschen");
+      }
+    }
+
+    document.getElementById('fuTypeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        id: document.getElementById('fu_type_id').value || 0,
+        bezeichnung: document.getElementById('fu_type_bezeichnung').value,
+        color_code: document.getElementById('fu_type_color').value || '#dde4ff'
+      };
+
+      const res = await fetch(apiBase + "?action=followup_type_save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Wiedervorlage-Typ gespeichert.";
+        resetFuTypeForm();
+        loadFuTypes();
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler beim Speichern des Wiedervorlage-Typs";
+      }
+    });
+
+    // ---------- IMAP ----------
+    function resetImapForm() {
+      document.getElementById('imap_host').value = '';
+      document.getElementById('imap_port').value = 993;
+      document.getElementById('imap_encryption').value = 'ssl';
+      document.getElementById('imap_username').value = '';
+      document.getElementById('imap_password').value = '';
+      document.getElementById('imap_mailbox').value = 'INBOX';
+    }
+
+    function resetAlertSettingsForm() {
+      document.getElementById('alert_followup_age_days').value = 3;
+    }
+
+    async function loadImapSettings() {
+      const res = await fetch(apiBase + "?action=imap_get_settings", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Mailkonto-Daten";
+        return;
+      }
+      const s = data.settings || {};
+      document.getElementById('imap_host').value = s.host || '';
+      document.getElementById('imap_port').value = s.port || 993;
+      document.getElementById('imap_encryption').value = s.encryption || 'ssl';
+      document.getElementById('imap_username').value = s.username || '';
+      document.getElementById('imap_password').value = s.password || '';
+      document.getElementById('imap_mailbox').value = s.mailbox || 'INBOX';
+    }
+
+    async function loadAlertSettings() {
+      const res = await fetch(apiBase + "?action=backoffice_alert_settings_get", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Meldungsradar-Einstellungen";
+        return;
+      }
+      const s = data.settings || {};
+      document.getElementById('alert_followup_age_days').value = s.followup_age_days ?? 3;
+    }
+
+    document.getElementById('imapForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        host: document.getElementById('imap_host').value,
+        port: document.getElementById('imap_port').value,
+        encryption: document.getElementById('imap_encryption').value,
+        username: document.getElementById('imap_username').value,
+        password: document.getElementById('imap_password').value,
+        mailbox: document.getElementById('imap_mailbox').value
+      };
+
+      const res = await fetch(apiBase + "?action=imap_save_settings", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Mailkonto gespeichert.";
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler beim Speichern des Mailkontos";
+      }
+    });
+
+    document.getElementById('alertSettingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        followup_age_days: document.getElementById('alert_followup_age_days').value
+      };
+
+      const res = await fetch(apiBase + "?action=backoffice_alert_settings_save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Meldungsradar gespeichert.";
+        document.getElementById('alert_followup_age_days').value =
+          (data.settings && data.settings.followup_age_days != null)
+            ? data.settings.followup_age_days
+            : payload.followup_age_days;
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler beim Speichern des Meldungsradars";
+      }
+    });
+
+    // ---------- KIM-Darstellung (localStorage) ----------
+    function loadKimViewModeSetting() {
+      const select = document.getElementById('kim_view_mode');
+      if (!select) return;
+      const value = localStorage.getItem(KIM_VIEW_KEY) || "panel";
+      select.value = value;
+    }
+
+    document.getElementById('kim_view_mode').addEventListener('change', (e) => {
+      localStorage.setItem(KIM_VIEW_KEY, e.target.value);
+    });
+
+    // ---------- Init ----------
+    (async function init() {
+      resetUserForm();
+      resetStatusMasterForm();
+      resetFuTypeForm();
+      resetImapForm();
+      resetAlertSettingsForm();
+      loadKimViewModeSetting();
+      await loadUsers();
+      await loadStatusMaster();
+      await loadAlertSettings();
+      await loadFuTypes();
+      await loadImapSettings();
+    })();
+  </script>
+</body>
+</html>

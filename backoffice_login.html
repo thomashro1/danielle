@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backoffice Login</title>
+  <link rel="stylesheet" href="vendor/tabler/tabler.min.css">
+  <link rel="stylesheet" href="backoffice.css">
+  <script src="vendor/tabler/tabler.min.js" defer></script>
+  <script src="backoffice-shell.js" defer></script>
+</head>
+<body data-bo-page="login">
+  <div class="auth-shell">
+    <div class="auth-card">
+      <h1>DANIELLE</h1>
+      <div class="auth-subtitle">Backoffice&nbsp;Sign-In</div>
+
+      <form id="loginForm">
+        <label>
+          <span>Benutzername</span>
+          <input type="text" id="username" required>
+        </label>
+        <label>
+          <span>Passwort</span>
+          <input type="password" id="password" required>
+        </label>
+        <button type="submit" class="primary" style="width:100%; margin-top:6px;">
+          Anmelden
+        </button>
+      </form>
+
+      <div id="message"></div>
+
+      <div class="auth-footer">
+        DANIELLE Backoffice · Demo
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Alle Dateien (HTML + PHP) liegen im selben Verzeichnis
+    // -> careconnect.php wird relativ von dort aus aufgerufen
+    const apiBase = "careconnect.php";
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch(apiBase + "?action=login_backoffice", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = "backoffice_main.html";
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler";
+        document.getElementById('message').classList.add('error');
+      }
+    });
+  </script>
+</body>
+</html>

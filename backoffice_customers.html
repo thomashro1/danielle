@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DANIELLE Backoffice – Kunden</title>
+  <link rel="stylesheet" href="vendor/tabler/tabler.min.css">
+  <link rel="stylesheet" href="backoffice.css">
+  <script src="vendor/tabler/tabler.min.js" defer></script>
+  <script src="backoffice-shell.js" defer></script>
+  <style>
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sortable:hover {
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body data-bo-page="customers">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Kundenverwaltung</h1>
+        <span>DANIELLE Backoffice</span>
+      </div>
+    </header>
+
+    <main class="app-main-full">
+      <section class="app-panel">
+        <div class="card-header">
+          <h2>KUNDENLISTE</h2>
+          <span>Übersicht &amp; Verwaltung</span>
+        </div>
+
+        <div class="section-header" style="margin-bottom:8px;">
+          <div class="help-text">
+            Hier sehen Sie alle angelegten Kunden.
+          </div>
+          <button type="button" class="primary" id="btnCreateCustomer">
+            Neuen Kunden anlegen
+          </button>
+        </div>
+
+        <!-- Suchfeld + PageSize -->
+        <div class="section-inline" style="margin-bottom:8px; justify-content:space-between; align-items:flex-end; gap:8px; flex-wrap:wrap;">
+          <label style="flex:1; min-width:220px; max-width:320px;">
+            <span class="help-text">Suche (Name, Vorname, E-Mail, Telefon)</span>
+            <input type="text" id="searchInput" placeholder="Suchen …">
+          </label>
+
+          <label class="help-text" style="display:flex; align-items:center; gap:4px;">
+            <span>Einträge pro Seite:</span>
+            <select id="pageSizeSelect">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="lastname"  data-label="Name">Name</th>
+              <th class="sortable" data-sort="firstname" data-label="Vorname">Vorname</th>
+              <th class="sortable" data-sort="birthdate" data-label="Geburtsdatum">Geburtsdatum</th>
+              <th class="sortable" data-sort="phone"     data-label="Telefon">Telefon</th>
+              <th class="sortable" data-sort="email"     data-label="E-Mail">E-Mail</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="customersTableBody">
+            <!-- Kunden werden hier dynamisch geladen -->
+          </tbody>
+        </table>
+
+        <div id="message" class="help-text" style="margin-top:8px;"></div>
+
+        <!-- Pagination -->
+        <div class="section-inline" style="margin-top:8px; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div id="pageInfo" class="help-text"></div>
+          <div>
+            <button type="button" class="small" id="btnPrevPage">Zurück</button>
+            <button type="button" class="small" id="btnNextPage">Weiter</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const apiBase = "careconnect.php";
+
+    // Zustand
+    let customers = [];
+    let sortColumn = "lastname";
+    let sortDirection = "asc"; // "asc" | "desc"
+    let pageSize = 20;
+    let currentPage = 1;
+
+    // ---- Hilfsfunktionen für Felder ----
+    function getField(customer, key) {
+      switch (key) {
+        case "lastname":
+          return customer.lastname  || customer.nachname     || "";
+        case "firstname":
+          return customer.firstname || customer.vorname      || "";
+        case "birthdate":
+          return customer.birthdate || customer.geburtsdatum || "";
+        case "phone":
+          return customer.phone     || customer.telefon      || "";
+        case "email":
+          return customer.email     || "";
+        default:
+          return "";
+      }
+    }
+
+    // ---- Laden der Kunden vom Server ----
+    async function loadCustomers() {
+      try {
+        const response = await fetch(apiBase + "?action=customers_list", {
+          credentials: "include"
+        });
+
+        console.log("GET /customers_list Status:", response.status);
+
+        const data = await response.json();
+        console.log("API-Antwort customers_list:", data);
+
+        if (!data.success) {
+          document.getElementById("message").textContent =
+            data.error || data.message || "Fehler beim Laden der Kunden.";
+          return;
+        }
+
+        customers = data.customers || [];
+        document.getElementById("message").textContent = "";
+
+        currentPage = 1;
+        renderSortIndicators();
+        renderCustomers();
+      } catch (err) {
+        console.error("Error loading customers:", err);
+        document.getElementById("message").textContent =
+          "Netzwerkfehler beim Laden der Kunden.";
+      }
+    }
+
+    // ---- Suche + Sortierung + Pagination anwenden ----
+    function getFilteredSortedList() {
+      const term = document.getElementById("searchInput").value.toLowerCase().trim();
+
+      let list = customers.slice();
+
+      if (term) {
+        list = list.filter(c => {
+          const ln = getField(c, "lastname").toLowerCase();
+          const fn = getField(c, "firstname").toLowerCase();
+          const em = getField(c, "email").toLowerCase();
+          const ph = getField(c, "phone").toLowerCase();
+          return ln.includes(term) || fn.includes(term) || em.includes(term) || ph.includes(term);
+        });
+      }
+
+      list.sort((a, b) => {
+        let va = getField(a, sortColumn).toString().toLowerCase();
+        let vb = getField(b, sortColumn).toString().toLowerCase();
+        if (va < vb) return sortDirection === "asc" ? -1 : 1;
+        if (va > vb) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+
+      return list;
+    }
+
+    function renderCustomers() {
+      const tbody = document.getElementById("customersTableBody");
+      const pageInfo = document.getElementById("pageInfo");
+
+      const list = getFilteredSortedList();
+      const total = list.length;
+      const totalPages = total === 0 ? 1 : Math.ceil(total / pageSize);
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const pageItems = list.slice(startIndex, endIndex);
+
+      tbody.innerHTML = "";
+
+      pageItems.forEach(customer => {
+        const row = document.createElement("tr");
+
+        const lastname  = getField(customer, "lastname");
+        const firstname = getField(customer, "firstname");
+        const birthdate = getField(customer, "birthdate");
+        const phone     = getField(customer, "phone");
+        const email     = getField(customer, "email");
+
+        row.innerHTML = `
+          <td>${lastname}</td>
+          <td>${firstname}</td>
+          <td>${birthdate}</td>
+          <td>${phone}</td>
+          <td>${email}</td>
+          <td style="white-space:nowrap;">
+            <button class="small primary" onclick="openCustomer(${customer.id})">
+              Öffnen
+            </button>
+            <button class="small danger" onclick="deleteCustomer(${customer.id})">
+              Löschen
+            </button>
+          </td>
+        `;
+
+        tbody.appendChild(row);
+      });
+
+      if (total === 0) {
+        pageInfo.textContent = "Keine Kunden gefunden.";
+      } else {
+        const from = startIndex + 1;
+        const to   = startIndex + pageItems.length;
+        pageInfo.textContent =
+          `Seite ${currentPage} von ${totalPages} – Einträge ${from}–${to} von ${total}`;
+      }
+
+      document.getElementById("btnPrevPage").disabled = (currentPage <= 1 || total === 0);
+      document.getElementById("btnNextPage").disabled = (currentPage >= totalPages || total === 0);
+    }
+
+    // ---- Sort-Indikatoren in den Tabellenköpfen ----
+    function renderSortIndicators() {
+      document.querySelectorAll("th[data-sort]").forEach(th => {
+        const key = th.dataset.sort;
+        const baseLabel = th.dataset.label || th.textContent.replace(/ ▾| ▴/g, "");
+        let suffix = "";
+        if (key === sortColumn) {
+          suffix = sortDirection === "asc" ? " ▴" : " ▾";
+        }
+        th.textContent = baseLabel + suffix;
+      });
+    }
+
+    // ---- Aktionen ----
+    function openCustomer(id) {
+      window.location.href = "backoffice_customer_detail.html?id=" + id;
+    }
+
+    async function deleteCustomer(id) {
+      if (!confirm("Diesen Kunden wirklich löschen?")) return;
+
+      try {
+        const res = await fetch(apiBase + "?action=customer_delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ id })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById("message").textContent = "Kunde gelöscht.";
+          await loadCustomers();
+        } else {
+          document.getElementById("message").textContent =
+            data.error || "Fehler beim Löschen des Kunden.";
+        }
+      } catch (err) {
+        console.error("Error deleting customer:", err);
+        document.getElementById("message").textContent =
+          "Netzwerkfehler beim Löschen des Kunden.";
+      }
+    }
+
+    document.getElementById("btnCreateCustomer").addEventListener("click", () => {
+      window.location.href = "backoffice_customer_detail.html";
+    });
+
+    // Suche
+    document.getElementById("searchInput").addEventListener("input", () => {
+      currentPage = 1;
+      renderCustomers();
+    });
+
+    // PageSize-Auswahl
+    document.getElementById("pageSizeSelect").addEventListener("change", (e) => {
+      pageSize = parseInt(e.target.value, 10) || 20;
+      currentPage = 1;
+      renderCustomers();
+    });
+
+    // Pagination-Buttons
+    document.getElementById("btnPrevPage").addEventListener("click", () => {
+      currentPage--;
+      renderCustomers();
+    });
+
+    document.getElementById("btnNextPage").addEventListener("click", () => {
+      currentPage++;
+      renderCustomers();
+    });
+
+    // Sortier-Click-Handler
+    document.querySelectorAll("th[data-sort]").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sort;
+        if (sortColumn === key) {
+          sortDirection = (sortDirection === "asc") ? "desc" : "asc";
+        } else {
+          sortColumn = key;
+          sortDirection = "asc";
+        }
+        renderSortIndicators();
+        renderCustomers();
+      });
+    });
+
+    // Initial laden
+    loadCustomers();
+  </script>
+</body>
+</html>

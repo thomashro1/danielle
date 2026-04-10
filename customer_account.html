@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DANIELLE - Kundenkonto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="customer.css">
+</head>
+<body>
+  <div class="cp-shell">
+    <header class="cp-header">
+      <div class="cp-brand">
+        <h1>DANIELLE</h1>
+        <p class="cp-subtitle">Konto</p>
+      </div>
+      <button id="btnLogout" class="cp-btn cp-btn-ghost cp-btn-inline" type="button">Abmelden</button>
+    </header>
+
+    <main class="cp-main">
+      <section class="cp-card cp-card-shadow">
+        <div class="cp-section-head">
+          <div>
+            <h2>Persoenliche Daten</h2>
+            <p>Pflegen Sie hier Ihre Kontaktdaten fuer das mobile Kundenportal.</p>
+          </div>
+        </div>
+
+        <form id="profileForm" class="cp-stack">
+          <div class="cp-row-2">
+            <label>
+              Anrede
+              <input type="text" id="anrede">
+            </label>
+            <label>
+              Telefon
+              <input type="text" id="telefon">
+            </label>
+          </div>
+
+          <div class="cp-row-2">
+            <label>
+              Vorname
+              <input type="text" id="vorname">
+            </label>
+            <label>
+              Nachname
+              <input type="text" id="nachname">
+            </label>
+          </div>
+
+          <label>
+            Adresse
+            <textarea id="adresse" rows="3"></textarea>
+          </label>
+
+          <label>
+            E-Mail
+            <input type="email" id="email">
+          </label>
+
+          <label>
+            Neues Passwort
+            <input type="password" id="password" placeholder="Leer lassen, wenn nichts geaendert werden soll">
+          </label>
+
+          <button type="submit" class="cp-btn cp-btn-primary cp-btn-block">Kontodaten speichern</button>
+        </form>
+        <p id="profileMessage" class="cp-message"></p>
+      </section>
+    </main>
+
+    <nav class="cp-nav" data-customer-nav></nav>
+  </div>
+
+  <script src="customer.js"></script>
+  <script>
+    async function loadProfile() {
+      const customer = await ensureCustomerSession();
+      if (!customer) return null;
+
+      document.getElementById('anrede').value = customer.anrede || '';
+      document.getElementById('vorname').value = customer.vorname || '';
+      document.getElementById('nachname').value = customer.nachname || '';
+      document.getElementById('adresse').value = customer.adresse || '';
+      document.getElementById('telefon').value = customer.telefon || '';
+      document.getElementById('email').value = customer.email || '';
+      document.getElementById('password').value = '';
+      return customer;
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const payload = {
+        anrede: document.getElementById('anrede').value.trim(),
+        vorname: document.getElementById('vorname').value.trim(),
+        nachname: document.getElementById('nachname').value.trim(),
+        adresse: document.getElementById('adresse').value.trim(),
+        telefon: document.getElementById('telefon').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value.trim(),
+      };
+
+      const response = await fetch(`${customerApiBase}?action=customer_self_update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      const message = document.getElementById('profileMessage');
+      message.className = 'cp-message';
+
+      if (data.success) {
+        message.textContent = 'Kontodaten wurden aktualisiert.';
+        message.classList.add('is-success');
+        document.getElementById('password').value = '';
+        return;
+      }
+
+      message.textContent = data.error || 'Fehler beim Speichern.';
+      message.classList.add('is-error');
+    });
+
+    (async function init() {
+      initCustomerShell('account');
+      await loadProfile();
+    })();
+  </script>
+</body>
+</html>

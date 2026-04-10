@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DANIELLE - Dokumente</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="customer.css">
+</head>
+<body>
+  <div class="cp-shell">
+    <header class="cp-header">
+      <div class="cp-brand">
+        <h1>DANIELLE</h1>
+        <p class="cp-subtitle">Dokumente</p>
+      </div>
+      <button id="btnLogout" class="cp-btn cp-btn-ghost cp-btn-inline" type="button">Abmelden</button>
+    </header>
+
+    <main class="cp-main">
+      <section class="cp-card cp-card-shadow">
+        <div class="cp-section-head">
+          <div>
+            <h2>Dokumente mobil verwalten</h2>
+            <p>Waehlen Sie eine Datei oder erstellen Sie direkt ein Foto. Vor dem Upload sehen Sie zuerst die Vorschau.</p>
+          </div>
+        </div>
+
+        <div class="cp-upload-actions" style="margin-top:16px;">
+          <button id="btnPickDocument" type="button" class="cp-btn cp-btn-primary">Dokument waehlen</button>
+          <button id="btnCamera" type="button" class="cp-btn cp-btn-secondary">Kamera</button>
+        </div>
+
+        <input id="docPicker" type="file" hidden accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt,.rtf,image/*">
+        <input id="cameraPicker" type="file" hidden accept="image/*" capture="environment">
+
+        <p id="docMessage" class="cp-message"></p>
+      </section>
+
+      <section>
+        <div class="cp-section-head">
+          <div>
+            <h2 class="cp-section-heading">Verfuegbare Unterlagen</h2>
+            <p class="cp-section-copy">Bereitgestellte und selbst hochgeladene Dokumente.</p>
+          </div>
+        </div>
+        <ul id="docList" class="cp-doc-list" style="margin-top:12px;">
+          <li class="cp-loading">Dokumente werden geladen...</li>
+        </ul>
+      </section>
+    </main>
+
+    <nav class="cp-nav" data-customer-nav></nav>
+  </div>
+
+  <div id="uploadModal" class="cp-modal" hidden>
+    <div class="cp-modal-card cp-card cp-card-shadow">
+      <div class="cp-section-head">
+        <div>
+          <h2>Upload vorbereiten</h2>
+          <p id="previewSource" class="cp-section-copy"></p>
+        </div>
+      </div>
+
+      <div id="previewFrame" class="cp-preview-frame" style="margin-top:14px;"></div>
+
+      <div class="cp-stack">
+        <label>
+          Bezeichnung
+          <input type="text" id="previewLabel" placeholder="z. B. Arztbericht">
+        </label>
+        <label>
+          Bemerkung
+          <textarea id="previewNote" rows="4" placeholder="Optionaler Hinweis zum Upload"></textarea>
+        </label>
+      </div>
+
+      <div class="cp-actions-inline" style="margin-top:16px;">
+        <button id="btnDiscardUpload" type="button" class="cp-btn cp-btn-ghost cp-btn-inline">Verwerfen</button>
+        <button id="btnConfirmUpload" type="button" class="cp-btn cp-btn-primary cp-btn-inline">Hochladen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="customer.js"></script>
+  <script>
+    let pendingFile = null;
+    let pendingPreviewUrl = null;
+    let pendingFilename = '';
+
+    function clearPendingUpload() {
+      pendingFile = null;
+      pendingFilename = '';
+      if (pendingPreviewUrl) {
+        URL.revokeObjectURL(pendingPreviewUrl);
+        pendingPreviewUrl = null;
+      }
+      document.getElementById('previewLabel').value = '';
+      document.getElementById('previewNote').value = '';
+      document.getElementById('previewFrame').innerHTML = '';
+      document.getElementById('uploadModal').hidden = true;
+      document.getElementById('docPicker').value = '';
+      document.getElementById('cameraPicker').value = '';
+    }
+
+    function looksLikeImage(file) {
+      return file && String(file.type || '').startsWith('image/');
+    }
+
+    function defaultLabel(filename) {
+      const name = String(filename || '').split(/[\\/]/).pop() || 'Upload';
+      return name.replace(/\.[^.]+$/, '') || 'Upload';
+    }
+
+    function showUploadPreview(file, sourceLabel) {
+      pendingFile = file;
+      pendingFilename = file.name || 'upload';
+      document.getElementById('previewSource').textContent = sourceLabel;
+      document.getElementById('previewLabel').value = defaultLabel(pendingFilename);
+      document.getElementById('previewNote').value = '';
+
+      const previewFrame = document.getElementById('previewFrame');
+      previewFrame.innerHTML = '';
+
+      if (pendingPreviewUrl) {
+        URL.revokeObjectURL(pendingPreviewUrl);
+      }
+      pendingPreviewUrl = URL.createObjectURL(file);
+
+      if (looksLikeImage(file)) {
+        previewFrame.innerHTML = `<img src="${pendingPreviewUrl}" alt="Vorschau">`;
+      } else {
+        previewFrame.innerHTML = `
+          <div class="cp-preview-file">
+            <strong>${escapeHtml(file.name || 'Datei')}</strong>
+            <span>Die Datei wird erst nach Ihrer Freigabe hochgeladen.</span>
+          </div>
+        `;
+      }
+
+      document.getElementById('uploadModal').hidden = false;
+    }
+
+    async function loadDocuments() {
+      const response = await fetch(`${customerDocApiBase}?action=list`, {
+        credentials: 'include',
+      });
+      const data = await response.json();
+      const list = document.getElementById('docList');
+
+      if (!data.success) {
+        list.innerHTML = `<li class="cp-card cp-card-shadow"><p class="cp-text-small">Dokumente konnten nicht geladen werden.</p></li>`;
+        return;
+      }
+
+      const documents = data.documents || [];
+      if (documents.length === 0) {
+        list.innerHTML = `<li class="cp-card cp-card-shadow"><p class="cp-text-small">Aktuell sind keine Dokumente hinterlegt.</p></li>`;
+        return;
+      }
+
+      list.innerHTML = documents.map((document) => `
+        <li>
+          <article class="cp-doc-row">
+            <div>
+              <div class="cp-doc-title">${escapeHtml(document.label || document.filename || 'Dokument')}</div>
+              ${document.note ? `<div class="cp-network-person">${escapeHtml(document.note)}</div>` : ''}
+              <div class="cp-doc-meta">${escapeHtml(document.filename || '')} · ${escapeHtml(formatCustomerDate(document.created_at || ''))}</div>
+            </div>
+            <a href="${customerDocApiBase}?action=view&id=${encodeURIComponent(document.id)}" target="_blank" rel="noopener" class="cp-btn cp-btn-secondary cp-btn-inline">Oeffnen</a>
+          </article>
+        </li>
+      `).join('');
+    }
+
+    async function uploadPendingDocument() {
+      if (!pendingFile) return;
+
+      const message = document.getElementById('docMessage');
+      message.textContent = '';
+      message.className = 'cp-message';
+
+      const formData = new FormData();
+      formData.append('label', document.getElementById('previewLabel').value.trim());
+      formData.append('note', document.getElementById('previewNote').value.trim());
+      formData.append('file', pendingFile, pendingFilename);
+
+      const response = await fetch(`${customerDocApiBase}?action=upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        message.textContent = 'Dokument wurde hochgeladen.';
+        message.classList.add('is-success');
+        clearPendingUpload();
+        await loadDocuments();
+        return;
+      }
+
+      message.textContent = data.error || 'Fehler beim Upload.';
+      message.classList.add('is-error');
+    }
+
+    document.getElementById('btnPickDocument').addEventListener('click', () => {
+      document.getElementById('docPicker').click();
+    });
+
+    document.getElementById('btnCamera').addEventListener('click', () => {
+      document.getElementById('cameraPicker').click();
+    });
+
+    document.getElementById('docPicker').addEventListener('change', (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      showUploadPreview(file, 'Dokument');
+    });
+
+    document.getElementById('cameraPicker').addEventListener('change', (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      showUploadPreview(file, 'Kamera');
+    });
+
+    document.getElementById('btnDiscardUpload').addEventListener('click', clearPendingUpload);
+    document.getElementById('btnConfirmUpload').addEventListener('click', uploadPendingDocument);
+    document.getElementById('uploadModal').addEventListener('click', (event) => {
+      if (event.target.id === 'uploadModal') {
+        clearPendingUpload();
+      }
+    });
+
+    (async function init() {
+      initCustomerShell('documents');
+      const customer = await ensureCustomerSession();
+      if (!customer) return;
+      await loadDocuments();
+    })();
+  </script>
+</body>
+</html>

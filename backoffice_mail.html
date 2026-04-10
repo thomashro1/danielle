@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DANIELLE BACKOFFICE – KIM Mailclient</title>
+  <link rel="stylesheet" href="vendor/tabler/tabler.min.css">
+  <link rel="stylesheet" href="backoffice.css">
+  <script src="vendor/tabler/tabler.min.js" defer></script>
+  <script src="backoffice-shell.js" defer></script>
+</head>
+<body data-bo-page="mail">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>KIM Mailclient</h1>
+        <span>DANIELLE Backoffice</span>
+        
+        <span>KIM Mailclient · IMAP-Ansicht (nur Lesen)</span>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Linke Seite: Mail-Liste -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Eingang</h2>
+          <span>Letzte Nachrichten</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div class="help-text">
+            Ihre letzten Nachrichten.
+          </div>
+          <button type="button" class="secondary" id="btnReload">Aktualisieren</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Von</th>
+              <th>Betreff</th>
+              <th>Datum</th>
+            </tr>
+          </thead>
+          <tbody id="mailTableBody"></tbody>
+        </table>
+
+        <div id="listMessage"></div>
+      </section>
+
+      <!-- Rechte Seite: Mail-Detail -->
+      <section class="card card-muted">
+        <div class="card-header">
+          <h2>Nachricht</h2>
+          <span>Inhalt</span>
+        </div>
+
+        <div id="mailDetailHeader" class="section-stack" style="margin-bottom:10px;">
+          <div class="help-text">Bitte eine Nachricht links auswählen.</div>
+        </div>
+
+        <div class="card-ghost" style="height:100%; max-height:60vh; overflow:auto; padding:10px;">
+          <div id="mailBody" style="font-family:system-ui, sans-serif; font-size:13px;"></div>
+          <hr>
+          <div id="attachmentList"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const mailApiBase = "mail.php";
+
+    function base64ToBlob(base64, mime) {
+      const byteChars = atob(base64);
+      const byteNumbers = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteNumbers[i] = byteChars.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: mime || "application/octet-stream" });
+    }
+
+    async function loadMailList() {
+      const tbody = document.getElementById('mailTableBody');
+      tbody.innerHTML = "";
+      document.getElementById('listMessage').textContent = "Lade Mails...";
+
+      try {
+        const res = await fetch(mailApiBase + "?action=list", {
+          credentials: "include"
+        });
+
+        const text = await res.text();
+        console.log("MAIL LIST raw response:", text);
+
+        if (!res.ok) {
+          document.getElementById('listMessage').textContent =
+            "HTTP-Fehler " + res.status + " beim Laden der Mails.";
+          return;
+        }
+
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          document.getElementById('listMessage').textContent =
+            "Ungültige Server-Antwort (Liste ist kein JSON).";
+          console.error("Fehler beim JSON-Parse (list):", e);
+          return;
+        }
+
+        if (!data.success) {
+          document.getElementById('listMessage').textContent =
+            data.error || "Fehler beim Laden der Mails.";
+          return;
+        }
+
+        document.getElementById('listMessage').textContent = "";
+        const messages = data.messages || [];
+
+        if (messages.length === 0) {
+          document.getElementById('listMessage').textContent = "Keine Nachrichten gefunden.";
+          return;
+        }
+
+        messages.forEach(msg => {
+          const tr = document.createElement('tr');
+          if (!msg.seen) {
+            tr.style.fontWeight = "600";
+          }
+          tr.style.cursor = "pointer";
+          tr.addEventListener('click', () => loadMail(msg.msgno));
+
+          tr.innerHTML = `
+            <td>${msg.from || ""}</td>
+            <td>${msg.subject || ""}</td>
+            <td>${msg.date || ""}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Error loading mail list:", err);
+        document.getElementById('listMessage').textContent =
+          "Netzwerkfehler beim Laden der Mailliste.";
+      }
+    }
+
+    async function loadMail(msgno) {
+      const headerDiv = document.getElementById('mailDetailHeader');
+      const bodyDiv   = document.getElementById('mailBody');
+      const attDiv    = document.getElementById('attachmentList');
+
+      headerDiv.innerHTML = "<div class='help-text'>Lade Nachricht...</div>";
+      bodyDiv.innerHTML = "";
+      attDiv.innerHTML = "";
+
+      try {
+        const res = await fetch(
+          mailApiBase + "?action=get&msgno=" + encodeURIComponent(msgno),
+          { credentials: "include" }
+        );
+
+        const text = await res.text();
+        console.log("MAIL GET raw response (msgno=" + msgno + "):", text);
+
+        if (!res.ok) {
+          headerDiv.innerHTML =
+            "<div class='help-text' style='color:#b91c1c;'>HTTP-Fehler " +
+            res.status + " beim Laden der Nachricht.</div>";
+          return;
+        }
+
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Fehler beim JSON-Parse (get):", e);
+          headerDiv.innerHTML =
+            "<div class='help-text' style='color:#b91c1c;'>Ungültige Server-Antwort (keine gültige JSON-Struktur).</div>";
+          return;
+        }
+
+        if (!data.success) {
+          headerDiv.innerHTML =
+            "<div class='help-text' style='color:#b91c1c;'>" +
+            (data.error || "Fehler beim Laden der Nachricht.") +
+            "</div>";
+          return;
+        }
+
+        const m = data.message;
+        headerDiv.innerHTML = `
+          <div><strong>Betreff:</strong> ${m.subject || ""}</div>
+          <div class="help-text"><strong>Von:</strong> ${m.from || ""}</div>
+          <div class="help-text"><strong>An:</strong> ${m.to || ""}</div>
+          <div class="help-text"><strong>Datum:</strong> ${m.date || ""}</div>
+        `;
+
+        // HTML oder Text darstellen
+        if (m.body && m.body.trim().startsWith("<")) {
+          bodyDiv.innerHTML = m.body;
+        } else {
+          bodyDiv.textContent = m.body || "";
+        }
+
+        // Anhänge anzeigen + Drag-Start vorbereiten
+        attDiv.innerHTML = "";
+        if (m.attachments && m.attachments.length > 0) {
+          const title = document.createElement('div');
+          title.innerHTML = "<strong>Anhänge:</strong>";
+          attDiv.appendChild(title);
+
+          m.attachments.forEach(a => {
+            const wrapper = document.createElement('div');
+
+            // Download-Link
+            let url;
+            try {
+              const blob = base64ToBlob(a.data, a.mime);
+              url = URL.createObjectURL(blob);
+            } catch (e) {
+              url = "#";
+            }
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = a.filename;
+            link.target = "_blank";
+            link.textContent = a.filename;
+            link.draggable = true;
+
+            // Drag & Drop: Daten mitgeben (für Kundendetail-Fenster)
+            link.addEventListener('dragstart', (ev) => {
+              const payload = {
+                filename: a.filename,
+                mime: a.mime,
+                data: a.data
+              };
+              ev.dataTransfer.setData(
+                'application/x-careconnect-attachment',
+                JSON.stringify(payload)
+              );
+              ev.dataTransfer.effectAllowed = 'copy';
+            });
+
+            wrapper.appendChild(link);
+            attDiv.appendChild(wrapper);
+          });
+        }
+      } catch (err) {
+        console.error("Error loading single mail:", err);
+        headerDiv.innerHTML =
+          "<div class='help-text' style='color:#b91c1c;'>Netzwerkfehler beim Laden der Nachricht.</div>";
+      }
+    }
+
+    document.getElementById('btnReload').addEventListener('click', loadMailList);
+
+    (async function init() {
+      await loadMailList();
+    })();
+  </script>
+</body>
+</html>

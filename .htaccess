@@ -1,0 +1,6 @@
+Options -Indexes
+DirectoryIndex index.html index.php
+
+<FilesMatch "^(\.env|\.env\..*|README\.md|.*\.sql|.*\.log)$">
+  Require all denied
+</FilesMatch>

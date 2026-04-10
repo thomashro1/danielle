@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DANIELLE - Kundenportal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="customer.css">
+</head>
+<body>
+  <div class="cp-shell">
+    <header class="cp-header">
+      <div class="cp-brand">
+        <h1>DANIELLE</h1>
+        <p class="cp-subtitle">Kundenportal</p>
+      </div>
+      <button id="btnLogout" class="cp-btn cp-btn-ghost cp-btn-inline" type="button">Abmelden</button>
+    </header>
+
+    <main class="cp-main">
+      <section class="cp-card cp-card-shadow">
+        <p class="cp-subtitle">Uebersicht</p>
+        <h2 id="welcomeTitle">Hallo</h2>
+        <p id="welcomeText" class="cp-section-copy">
+          Ihr mobiles Kundenportal buendelt Statusmeldungen, Dokumente und direkte Anliegen an das Backoffice.
+        </p>
+      </section>
+
+      <section class="cp-card cp-card-shadow">
+        <div class="cp-section-head">
+          <div>
+            <h2>Problem melden</h2>
+            <p>Beschreiben Sie Ihr Anliegen kurz. Das Backoffice erhaelt automatisch eine neue Wiedervorlage.</p>
+          </div>
+        </div>
+
+        <form id="problemForm" class="cp-stack">
+          <label>
+            Beschreibung
+            <textarea id="problem_note" rows="5" placeholder="z. B. Rueckruf erbeten, Frage zu Unterlagen ..."></textarea>
+          </label>
+          <button type="submit" class="cp-btn cp-btn-primary cp-btn-block">Anliegen absenden</button>
+        </form>
+        <p id="problemMessage" class="cp-message"></p>
+      </section>
+
+      <section>
+        <div class="cp-section-head">
+          <div>
+            <h2 class="cp-section-heading">Mein Netzwerk</h2>
+            <p class="cp-section-copy">Ihre Ansprechpartner fuer schnelle Rueckfragen per Telefon oder Mail.</p>
+          </div>
+        </div>
+        <div id="networkCards" class="cp-grid-cards" style="margin-top:12px;">
+          <div class="cp-loading">Netzwerk wird geladen...</div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="cp-nav" data-customer-nav></nav>
+  </div>
+
+  <script src="customer.js"></script>
+  <script>
+    async function loadNetwork() {
+      const response = await fetch(`${customerApiBase}?action=customer_self_network`, {
+        credentials: 'include',
+      });
+      const data = await response.json();
+      const container = document.getElementById('networkCards');
+
+      if (!data.success) {
+        container.innerHTML = `
+          <article class="cp-card cp-card-shadow">
+            <p class="cp-text-small">Netzwerkpartner konnten nicht geladen werden.</p>
+          </article>
+        `;
+        return;
+      }
+
+      renderCustomerNetworkCards(container, data.partners || []);
+    }
+
+    document.getElementById('problemForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const note = document.getElementById('problem_note').value.trim();
+      const message = document.getElementById('problemMessage');
+      message.textContent = '';
+      message.className = 'cp-message';
+
+      if (!note) {
+        message.textContent = 'Bitte beschreiben Sie Ihr Anliegen.';
+        message.classList.add('is-error');
+        return;
+      }
+
+      const response = await fetch(`${customerApiBase}?action=customer_problem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ note }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        message.textContent = 'Vielen Dank. Ihr Anliegen wurde an das Backoffice uebermittelt.';
+        message.classList.add('is-success');
+        document.getElementById('problem_note').value = '';
+        return;
+      }
+
+      message.textContent = data.error || 'Fehler beim Senden.';
+      message.classList.add('is-error');
+    });
+
+    (async function init() {
+      initCustomerShell('home');
+      const customer = await ensureCustomerSession();
+      if (!customer) return;
+
+      const displayName = [customer.vorname, customer.nachname]
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+        .join(' ') || customer.email || 'Kunde';
+
+      document.getElementById('welcomeTitle').textContent = `Hallo ${displayName}`;
+      await loadNetwork();
+    })();
+  </script>
+</body>
+</html>

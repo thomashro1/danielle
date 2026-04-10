@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backoffice - Netzwerk</title>
+  <link rel="stylesheet" href="vendor/tabler/tabler.min.css">
+  <link rel="stylesheet" href="backoffice.css">
+  <script src="vendor/tabler/tabler.min.js" defer></script>
+  <script src="backoffice-shell.js" defer></script>
+</head>
+<body data-bo-page="network">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Netzwerk und Partner</h1>
+        <span>DANIELLE Backoffice</span>
+      </div>
+      <!-- Kopf-Navigation entfernt -->
+    </header>
+
+    <main class="app-main">
+      <!-- Netzwerkpartner-Verwaltung -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Netzwerkpartner</h2>
+          <span>Stammdaten &amp; Kontakt</span>
+        </div>
+
+        <form id="partnerForm" class="section-stack">
+          <input type="hidden" id="partner_id" value="0">
+
+          <div class="section-inline">
+            <label>Typ
+              <select id="partner_typ_id">
+                <option value="">Wird geladen…</option>
+              </select>
+            </label>
+            <label>Name / Firma
+              <input type="text" id="partner_name_firma">
+            </label>
+          </div>
+
+          <div class="section-inline">
+            <label>Vorname
+              <input type="text" id="partner_vorname">
+            </label>
+            <label>Nachname
+              <input type="text" id="partner_nachname">
+            </label>
+          </div>
+
+          <label>Adresse
+            <input type="text" id="partner_adresse">
+          </label>
+
+          <div class="section-inline">
+            <label>Telefon
+              <input type="text" id="partner_telefon">
+            </label>
+            <label>E-Mail
+              <input type="email" id="partner_email">
+            </label>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="resetPartnerForm()">Neu</button>
+            <button type="submit" class="primary">Netzwerkpartner speichern</button>
+          </div>
+        </form>
+
+        <table style="margin-top:14px;">
+          <thead>
+            <tr>
+              <th>Typ</th>
+              <th>Name / Firma</th>
+              <th>Person</th>
+              <th>Telefon</th>
+              <th>E-Mail</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="partnerTableBody"></tbody>
+        </table>
+      </section>
+
+      <!-- Netzwerkpartnertypen -->
+      <section class="card card-muted">
+        <div class="card-header">
+          <h2>Netzwerkpartnertypen</h2>
+          <span>Kategorien &amp; Zuordnung</span>
+        </div>
+
+        <form id="netTypeForm" class="section-stack">
+          <input type="hidden" id="net_type_id" value="0">
+
+          <label>Bezeichnung
+            <input type="text" id="net_type_bezeichnung">
+          </label>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="resetNetTypeForm()">Neu</button>
+            <button type="submit" class="primary">Typ speichern</button>
+          </div>
+        </form>
+
+        <table style="margin-top:14px;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Bezeichnung</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="netTypeTableBody"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <div id="message" style="padding:8px 16px; font-size:12px; color:#4b5563;"></div>
+  </div>
+
+  <script>
+    const apiBase = "careconnect.php";
+
+    // Navigation (wird ggf. vom Hauptframe aus benutzt)
+    function gotoCustomers()  { window.location.href = "backoffice_customers.html"; }
+    function gotoSettings()   { window.location.href = "backoffice_settings.html"; }
+    function gotoFollowups()  { window.location.href = "backoffice_followups.html"; }
+    function gotoNetwork()    { window.location.href = "backoffice_network.html"; }
+    function gotoKIM()        { window.open("backoffice_mail.html", "kimMail", "width=1200,height=800"); }
+
+    // Datenhaltung
+    let networkTypes = [];
+    let networkPartners = [];
+
+    // ---------- Netzwerk-Typen ----------
+
+    function resetNetTypeForm() {
+      document.getElementById('net_type_id').value = 0;
+      document.getElementById('net_type_bezeichnung').value = '';
+    }
+
+    async function loadNetworkTypes() {
+      const res = await fetch(apiBase + "?action=network_types_list", {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent =
+          data.error || "Fehler beim Laden der Netzwerkpartnertypen";
+        return;
+      }
+
+      networkTypes = data.types || [];
+
+      // Tabelle
+      const tbody = document.getElementById('netTypeTableBody');
+      tbody.innerHTML = "";
+      networkTypes.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${t.id}</td>
+          <td>${t.bezeichnung}</td>
+          <td>
+            <button type="button" onclick="editNetType(${t.id})">Bearbeiten</button>
+            <button type="button" class="danger" onclick="deleteNetType(${t.id})">Löschen</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Select im Partner-Formular
+      const sel = document.getElementById('partner_typ_id');
+      sel.innerHTML = "";
+      const optEmpty = document.createElement('option');
+      optEmpty.value = "";
+      optEmpty.textContent = "Typ wählen…";
+      sel.appendChild(optEmpty);
+
+      networkTypes.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.bezeichnung;
+        sel.appendChild(opt);
+      });
+    }
+
+    function editNetType(id) {
+      const t = networkTypes.find(x => x.id == id);
+      if (!t) return;
+      document.getElementById('net_type_id').value = t.id;
+      document.getElementById('net_type_bezeichnung').value = t.bezeichnung || '';
+    }
+
+    async function deleteNetType(id) {
+      if (!confirm("Diesen Netzwerkpartnertyp wirklich löschen?")) return;
+
+      const res = await fetch(apiBase + "?action=network_type_delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Typ gelöscht.";
+        await loadNetworkTypes();
+        await loadNetworkPartners(); // falls Partner betroffen
+      } else {
+        alert(data.error || "Fehler beim Löschen des Typs");
+      }
+    }
+
+    document.getElementById('netTypeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        id: document.getElementById('net_type_id').value || 0,
+        bezeichnung: document.getElementById('net_type_bezeichnung').value
+      };
+
+      const res = await fetch(apiBase + "?action=network_type_save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Netzwerkpartnertyp gespeichert.";
+        resetNetTypeForm();
+        await loadNetworkTypes();
+      } else {
+        document.getElementById('message').textContent =
+          data.error || "Fehler beim Speichern des Netzwerkpartnertyps";
+      }
+    });
+
+    // ---------- Netzwerkpartner ----------
+
+    function resetPartnerForm() {
+      document.getElementById('partner_id').value = 0;
+      document.getElementById('partner_typ_id').value = "";
+      document.getElementById('partner_name_firma').value = "";
+      document.getElementById('partner_vorname').value = "";
+      document.getElementById('partner_nachname').value = "";
+      document.getElementById('partner_adresse').value = "";
+      document.getElementById('partner_telefon').value = "";
+      document.getElementById('partner_email').value = "";
+    }
+
+    async function loadNetworkPartners() {
+      const res = await fetch(apiBase + "?action=network_partners_list", {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent =
+          data.error || "Fehler beim Laden der Netzwerkpartner";
+        return;
+      }
+
+      networkPartners = data.partners || [];
+      const tbody = document.getElementById('partnerTableBody');
+      tbody.innerHTML = "";
+
+      networkPartners.forEach(p => {
+        const person = ((p.vorname || '') + ' ' + (p.nachname || '')).trim();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.typ_bezeichnung || ''}</td>
+          <td>${p.name_firma || ''}</td>
+          <td>${person}</td>
+          <td>${p.telefon || ''}</td>
+          <td>${p.email || ''}</td>
+          <td>
+            <button type="button" onclick="editPartner(${p.id})">Bearbeiten</button>
+            <button type="button" class="danger" onclick="deletePartner(${p.id})">Löschen</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function editPartner(id) {
+      const res = await fetch(apiBase + "?action=network_partner_get&id=" + encodeURIComponent(id), {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || "Fehler beim Laden des Netzwerkpartners");
+        return;
+      }
+      const p = data.partner;
+      document.getElementById('partner_id').value = p.id;
+      document.getElementById('partner_typ_id').value = p.typ_id || "";
+      document.getElementById('partner_name_firma').value = p.name_firma || '';
+      document.getElementById('partner_vorname').value = p.vorname || '';
+      document.getElementById('partner_nachname').value = p.nachname || '';
+      document.getElementById('partner_adresse').value = p.adresse || '';
+      document.getElementById('partner_telefon').value = p.telefon || '';
+      document.getElementById('partner_email').value = p.email || '';
+    }
+
+    async function deletePartner(id) {
+      if (!confirm("Diesen Netzwerkpartner wirklich löschen?")) return;
+
+      const res = await fetch(apiBase + "?action=network_partner_delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Netzwerkpartner gelöscht.";
+        await loadNetworkPartners();
+      } else {
+        alert(data.error || "Fehler beim Löschen des Netzwerkpartners");
+      }
+    }
+
+    document.getElementById('partnerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        id: document.getElementById('partner_id').value || 0,
+        typ_id: document.getElementById('partner_typ_id').value,
+        name_firma: document.getElementById('partner_name_firma').value,
+        vorname: document.getElementById('partner_vorname').value,
+        nachname: document.getElementById('partner_nachname').value,
+        adresse: document.getElementById('partner_adresse').value,
+        telefon: document.getElementById('partner_telefon').value,
+        email: document.getElementById('partner_email').value
+      };
+
+      if (!payload.typ_id || !payload.name_firma) {
+        alert("Bitte mindestens Typ und Name/Firma ausfüllen.");
+        return;
+      }
+
+      const res = await fetch(apiBase + "?action=network_partner_save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Netzwerkpartner gespeichert.";
+        resetPartnerForm();
+        await loadNetworkPartners();
+      } else {
+        document.getElementById('message').textContent =
+          data.error || "Fehler beim Speichern des Netzwerkpartners";
+      }
+    });
+
+    // ---------- Init ----------
+
+    (async function init() {
+      resetNetTypeForm();
+      resetPartnerForm();
+      await loadNetworkTypes();
+      await loadNetworkPartners();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+.env
+.env.local
+.local/
+test-results/
+mobile/danielle_customer_app/build/
+c18x5xqr2_mysql_service_one_com.sql

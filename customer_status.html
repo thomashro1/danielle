@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DANIELLE - Status</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="customer.css">
+</head>
+<body>
+  <div class="cp-shell">
+    <header class="cp-header">
+      <div class="cp-brand">
+        <h1>DANIELLE</h1>
+        <p class="cp-subtitle">Status</p>
+      </div>
+      <button id="btnLogout" class="cp-btn cp-btn-ghost cp-btn-inline" type="button">Abmelden</button>
+    </header>
+
+    <main class="cp-main">
+      <section class="cp-card cp-card-shadow">
+        <div class="cp-section-head">
+          <div>
+            <h2>Status setzen</h2>
+            <p>Teilen Sie Ihren aktuellen Stand mit und ergaenzen Sie bei Bedarf eine Notiz.</p>
+          </div>
+        </div>
+
+        <form id="statusForm" class="cp-stack">
+          <label>
+            Status
+            <select id="status_type"></select>
+          </label>
+          <label>
+            Notiz
+            <textarea id="status_note" rows="4" placeholder="z. B. Unterlagen abgeschickt"></textarea>
+          </label>
+          <button type="submit" class="cp-btn cp-btn-primary cp-btn-block">Status speichern</button>
+        </form>
+        <p id="statusMessage" class="cp-message"></p>
+      </section>
+
+      <section>
+        <div class="cp-section-head">
+          <div>
+            <h2 class="cp-section-heading">Historie</h2>
+            <p class="cp-section-copy">Hier sehen Sie alle Statusmeldungen zu Ihrem Kundenkonto.</p>
+          </div>
+        </div>
+        <ul id="statusList" class="cp-doc-list" style="margin-top:12px;">
+          <li class="cp-loading">Statusmeldungen werden geladen...</li>
+        </ul>
+      </section>
+    </main>
+
+    <nav class="cp-nav" data-customer-nav></nav>
+  </div>
+
+  <script src="customer.js"></script>
+  <script>
+    async function loadStatusTypes() {
+      const response = await fetch(`${customerStatusApiBase}?action=types`, {
+        credentials: 'include',
+      });
+      const data = await response.json();
+      const select = document.getElementById('status_type');
+      const message = document.getElementById('statusMessage');
+
+      if (!data.success) {
+        message.textContent = data.error || 'Status-Typen konnten nicht geladen werden.';
+        message.className = 'cp-message is-error';
+        select.innerHTML = '<option value="">Keine Status-Typen verfuegbar</option>';
+        select.disabled = true;
+        return;
+      }
+
+      const types = data.types || [];
+      select.innerHTML = '';
+
+      if (types.length === 0) {
+        select.innerHTML = '<option value="">Keine Status-Typen verfuegbar</option>';
+        select.disabled = true;
+        return;
+      }
+
+      select.disabled = false;
+      types.forEach((type) => {
+        const option = document.createElement('option');
+        option.value = type.id;
+        option.textContent = type.bezeichnung;
+        select.appendChild(option);
+      });
+    }
+
+    async function loadStatusHistory() {
+      const response = await fetch(`${customerStatusApiBase}?action=list`, {
+        credentials: 'include',
+      });
+      const data = await response.json();
+      const list = document.getElementById('statusList');
+
+      if (!data.success) {
+        list.innerHTML = `<li class="cp-card cp-card-shadow"><p class="cp-text-small">Status-Historie konnte nicht geladen werden.</p></li>`;
+        return;
+      }
+
+      const items = data.items || [];
+      if (items.length === 0) {
+        list.innerHTML = `<li class="cp-card cp-card-shadow"><p class="cp-text-small">Noch keine Statuseintraege vorhanden.</p></li>`;
+        return;
+      }
+
+      list.innerHTML = items.map((item) => `
+        <li>
+          <article class="cp-doc-row">
+            <div>
+              <div class="cp-doc-title">${escapeHtml(item.bezeichnung || '')}</div>
+              <div class="cp-doc-meta">${escapeHtml(formatCustomerDate(item.created_at || ''))} · ${escapeHtml(item.user || 'Kunde')}</div>
+              ${item.note ? `<div class="cp-network-person">${escapeHtml(item.note)}</div>` : ''}
+            </div>
+          </article>
+        </li>
+      `).join('');
+    }
+
+    document.getElementById('statusForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const statusId = document.getElementById('status_type').value;
+      const note = document.getElementById('status_note').value.trim();
+      const message = document.getElementById('statusMessage');
+      message.textContent = '';
+      message.className = 'cp-message';
+
+      if (!statusId) {
+        message.textContent = 'Bitte einen Status auswaehlen.';
+        message.classList.add('is-error');
+        return;
+      }
+
+      const response = await fetch(`${customerStatusApiBase}?action=add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status_id: statusId, note }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        message.textContent = 'Status wurde gespeichert.';
+        message.classList.add('is-success');
+        document.getElementById('status_note').value = '';
+        await loadStatusHistory();
+        return;
+      }
+
+      message.textContent = data.error || 'Fehler beim Speichern des Status.';
+      message.classList.add('is-error');
+    });
+
+    (async function init() {
+      initCustomerShell('status');
+      const customer = await ensureCustomerSession();
+      if (!customer) return;
+      await loadStatusTypes();
+      await loadStatusHistory();
+    })();
+  </script>
+</body>
+</html>

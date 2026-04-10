@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DANIELLE - Anliegen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="customer.css">
+</head>
+<body>
+  <div class="cp-shell">
+    <header class="cp-header">
+      <div class="cp-brand">
+        <h1>DANIELLE</h1>
+        <p class="cp-subtitle">Anliegen</p>
+      </div>
+      <button id="btnLogout" class="cp-btn cp-btn-ghost cp-btn-inline" type="button">Abmelden</button>
+    </header>
+
+    <main class="cp-main">
+      <section class="cp-card cp-card-shadow">
+        <div class="cp-section-head">
+          <div>
+            <h2>Problem melden</h2>
+            <p>Beschreiben Sie Ihr Anliegen kurz. Das Backoffice erhaelt automatisch eine neue Wiedervorlage.</p>
+          </div>
+        </div>
+
+        <form id="problemForm" class="cp-stack">
+          <label>
+            Beschreibung
+            <textarea id="problem_note" rows="5" placeholder="z. B. Rueckruf erbeten, Frage zu Unterlagen ..."></textarea>
+          </label>
+          <button type="submit" class="cp-btn cp-btn-primary cp-btn-block">Anliegen absenden</button>
+        </form>
+        <p id="problemMessage" class="cp-message"></p>
+      </section>
+    </main>
+
+    <nav class="cp-nav" data-customer-nav></nav>
+  </div>
+
+  <script src="customer.js"></script>
+  <script>
+    document.getElementById('problemForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const note = document.getElementById('problem_note').value.trim();
+      const message = document.getElementById('problemMessage');
+      message.textContent = '';
+      message.className = 'cp-message';
+
+      if (!note) {
+        message.textContent = 'Bitte beschreiben Sie Ihr Anliegen.';
+        message.classList.add('is-error');
+        return;
+      }
+
+      const response = await fetch(`${customerApiBase}?action=customer_problem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ note }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        message.textContent = 'Vielen Dank. Ihr Anliegen wurde an das Backoffice uebermittelt.';
+        message.classList.add('is-success');
+        document.getElementById('problem_note').value = '';
+        return;
+      }
+
+      message.textContent = data.error || 'Fehler beim Senden.';
+      message.classList.add('is-error');
+    });
+
+    (async function init() {
+      initCustomerShell('home');
+      const customer = await ensureCustomerSession();
+      if (!customer) return;
+    })();
+  </script>
+</body>
+</html>

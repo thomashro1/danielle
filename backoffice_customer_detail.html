@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backoffice - Kundendetails</title>
+  <link rel="stylesheet" href="vendor/tabler/tabler.min.css">
+  <link rel="stylesheet" href="backoffice.css">
+  <script src="vendor/tabler/tabler.min.js" defer></script>
+  <script src="backoffice-shell.js" defer></script>
+</head>
+<body data-bo-page="customer-detail">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>Kundendetails</h1>
+        <span>DANIELLE Backoffice</span>
+      </div>
+      <!-- Kopf-Navigation entfernt -->
+    </header>
+
+    <main class="app-main">
+      <!-- Linke Spalte: Stammdaten + Ansprechpartner + Netzwerk -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Stammdaten</h2>
+          <span>Kunde &amp; Ansprechpartner</span>
+        </div>
+
+        <button onclick="goBack()" class="secondary" style="margin-bottom:10px;">Zurück zur Liste</button>
+
+        <form id="customerForm" class="section-stack">
+          <input type="hidden" id="id">
+
+          <div>
+            <div class="section-title">Kunde</div>
+            <div class="section-inline">
+              <label>Anrede
+                <input type="text" id="anrede">
+              </label>
+              <label>Telefon
+                <input type="text" id="telefon">
+              </label>
+            </div>
+
+            <div class="section-inline">
+              <label>Vorname
+                <input type="text" id="vorname">
+              </label>
+              <label>Nachname
+                <input type="text" id="nachname">
+              </label>
+            </div>
+
+            <label>Adresse
+              <input type="text" id="adresse">
+            </label>
+
+            <div class="section-inline">
+              <label>E-Mail
+                <input type="email" id="email">
+              </label>
+              <label>Passwort
+                <input type="text" id="password">
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">Ansprechpartner</div>
+            <div class="section-inline">
+              <label>Anrede
+                <input type="text" id="kontakt_anrede">
+              </label>
+              <label>Telefon
+                <input type="text" id="kontakt_telefon">
+              </label>
+            </div>
+            <div class="section-inline">
+              <label>Vorname
+                <input type="text" id="kontakt_vorname">
+              </label>
+              <label>Nachname
+                <input type="text" id="kontakt_nachname">
+              </label>
+            </div>
+            <label>Adresse
+              <input type="text" id="kontakt_adresse">
+            </label>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
+            <button type="button" class="secondary" id="btnOpenNotes">Notizen</button>
+            <div style="display:flex; gap:8px;">
+              <button type="submit" class="primary">Kunde speichern</button>
+            </div>
+          </div>
+        </form>
+
+        <div id="message"></div>
+
+        <!-- Netzwerkpartner-Zuordnung für diesen Kunden -->
+        <section class="section-stack" style="margin-top:20px;">
+          <div class="section-title">Netzwerkpartner</div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; margin-bottom:8px;">
+            <label style="flex:1; min-width:220px;">
+              Netzwerkpartner zuordnen
+              <select id="netzwerkpartner_select">
+                <option value="">Wird geladen…</option>
+              </select>
+            </label>
+            <button type="button" class="primary" onclick="addNetworkPartnerToCustomer()">Hinzufügen</button>
+            <button type="button" class="secondary" onclick="gotoNetwork()">Netzwerk-Verwaltung</button>
+          </div>
+
+          <div id="customerNetworkContainer"></div>
+        </section>
+      </section>
+
+      <!-- Rechte Spalte: Status, Wiedervorlagen, Dokumente -->
+      <section class="section-stack">
+        <div class="card card-muted">
+          <div class="card-header">
+            <h2>Status-Historie</h2>
+            <span>Bearbeitung &amp; Verlauf</span>
+          </div>
+
+          <form id="statusForm" style="margin-bottom:10px;">
+            <input type="hidden" id="status_entry_id" value="0">
+
+            <div class="section-inline">
+              <label>Status
+                <select id="status_id"></select>
+              </label>
+            </div>
+            <label>Notiz
+              <textarea id="status_notiz" rows="3"></textarea>
+            </label>
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+              <button type="button" onclick="resetStatusForm()">Neu</button>
+              <button type="submit" class="primary">Status speichern</button>
+            </div>
+          </form>
+
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Status</th>
+                <th>Notiz</th>
+                <th>Benutzer</th>
+                <th>Erstellt</th>
+                <th>Geändert</th>
+                <th>Aktionen</th>
+              </tr>
+            </thead>
+            <tbody id="statusTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Wiedervorlagen dieses Kunden -->
+        <div class="card card-ghost">
+          <div class="card-header">
+            <h2>Wiedervorlagen</h2>
+            <span>zu diesem Kunden</span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div class="help-text">
+              Hier sehen Sie alle Wiedervorlagen nur für diesen Kunden.
+            </div>
+            <button type="button" class="primary" onclick="newFollowupForCurrentCustomer()">Neue Wiedervorlage</button>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Datum</th>
+                <th>Typ</th>
+                <th>Notiz</th>
+                <th>Status</th>
+                <th>Aktionen</th>
+              </tr>
+            </thead>
+            <tbody id="fuCustomerTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="card card-ghost">
+          <div class="card-header">
+            <h2>Dokumente</h2>
+            <span>Upload &amp; Ablage</span>
+          </div>
+
+          <p class="help-text">
+            Hinweis: Bitte zuerst den Kunden speichern, bevor Dokumente hinzugefügt werden.
+          </p>
+
+          <div class="section-stack">
+            <label>Bezeichnung
+              <input type="text" id="doc_label" placeholder="z.B. Vertrag, Ausweis, Angebot ...">
+            </label>
+
+            <label>Datei auswählen
+              <input type="file" id="fileInput">
+            </label>
+
+            <div id="dropZone">
+              Datei hierher ziehen oder klicken, um eine Datei auszuwählen (Bilder, PDF, Word, Excel)<br>
+              <span class="help-text">Du kannst auch Anhänge aus dem KIM-Mailfenster hierher ziehen.</span>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end;">
+              <button type="button" id="btnUploadDoc" class="primary">Dokument hochladen</button>
+            </div>
+          </div>
+
+          <table style="margin-top:12px;">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Bezeichnung</th>
+                <th>Dateiname</th>
+                <th>Benutzer</th>
+                <th>Importiert am</th>
+                <th>Aktionen</th>
+              </tr>
+            </thead>
+            <tbody id="docTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ===== Notiz-Modal ===== -->
+  <div id="notesDialog" class="dialog-overlay">
+    <div class="card dialog-card" style="max-width:900px; width:90%; max-height:90vh; display:flex; flex-direction:column;">
+      <div class="card-header">
+        <h2>Kundennotizen</h2>
+        <span>Betreff, Text &amp; Historie</span>
+      </div>
+
+      <form id="noteForm" class="section-stack" style="margin-bottom:8px;">
+        <input type="hidden" id="note_id" value="0">
+
+        <label>Betreff
+          <input type="text" id="note_subject" required>
+        </label>
+
+        <label>Text
+          <textarea id="note_content" rows="6"></textarea>
+        </label>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <button type="button" class="secondary" id="btnNoteNew">Neu</button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="secondary" id="btnNotesClose">Schließen</button>
+            <button type="submit" class="primary">Notiz speichern</button>
+          </div>
+        </div>
+      </form>
+
+      <div id="notesList" style="flex:1 1 auto; overflow:auto; padding:4px 0;"></div>
+    </div>
+  </div>
+
+  <script>
+    const apiBase   = "careconnect.php";
+    const docApiBase   = "document.php";
+    const notesApiBase = "backend_notiz.php";
+
+    let currentCustomerId = 0;
+    let currentStatuses = [];
+    let statusMaster = [];
+    let currentDocuments = [];
+    let customerFollowups = [];
+
+    // Netzwerk-Master & Zuordnungen
+    let allNetworkPartners = [];
+    let customerNetworkPartners = [];
+
+    // Notizen
+    let customerNotes = [];
+
+    function gotoCustomers()  { window.location.href = "backoffice_customers.html"; }
+    function gotoSettings()   { window.location.href = "backoffice_settings.html"; }
+    function gotoFollowups()  { window.location.href = "backoffice_followups.html"; }
+    function gotoNetwork()    { window.location.href = "backoffice_network.html"; }
+    function gotoKIM()        { window.open("backoffice_mail.html", "kimMail", "width=1200,height=800"); }
+
+    // Logout-Button existiert nicht mehr – nur absichern, falls er irgendwann wieder kommt
+    const logoutBtn = document.getElementById('btnLogout');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        await fetch(apiBase + "?action=logout", { credentials: "include" });
+        window.location.href = "backoffice_login.html";
+      });
+    }
+
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    function goBack() {
+      window.location.href = "backoffice_customers.html";
+    }
+
+    // ---------- Status-Master ----------
+
+    async function loadStatusMaster() {
+      const res = await fetch(apiBase + "?action=status_list", {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Statusliste";
+        return;
+      }
+      statusMaster = (data.statuses || []);
+      const select = document.getElementById('status_id');
+      select.innerHTML = "";
+      statusMaster.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.bezeichnung + (s.kundenkennung_flag ? " (Kundenkennzeichen)" : "");
+        select.appendChild(opt);
+      });
+    }
+
+    // ---------- Netzwerk-Master (alle Partner) ----------
+
+    async function loadNetworkPartnerMaster() {
+      const res = await fetch(apiBase + "?action=network_partners_list", {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Netzwerkpartner";
+        return;
+      }
+      allNetworkPartners = data.partners || [];
+
+      const select = document.getElementById('netzwerkpartner_select');
+      if (!select) return;
+      select.innerHTML = "";
+      const optEmpty = document.createElement('option');
+      optEmpty.value = "";
+      optEmpty.textContent = "Netzwerkpartner wählen…";
+      select.appendChild(optEmpty);
+
+      allNetworkPartners.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const typ = p.typ_bezeichnung ? (p.typ_bezeichnung + " – ") : "";
+        opt.textContent = typ + (p.name_firma || '');
+        select.appendChild(opt);
+      });
+    }
+
+    // ---------- Kunde laden ----------
+
+    async function loadCustomer() {
+      const id = getQueryParam('id');
+      if (!id) {
+        currentCustomerId = 0;
+        customerNetworkPartners = [];
+        renderCustomerNetworkPartners();
+        return;
+      }
+
+      const res = await fetch(apiBase + "?action=customer_get&id=" + encodeURIComponent(id), {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden";
+        return;
+      }
+      const c = data.customer;
+      currentCustomerId = c.id;
+
+      document.getElementById('id').value = c.id;
+      document.getElementById('anrede').value = c.anrede || '';
+      document.getElementById('vorname').value = c.vorname || '';
+      document.getElementById('nachname').value = c.nachname || '';
+      document.getElementById('adresse').value = c.adresse || '';
+      document.getElementById('telefon').value = c.telefon || '';
+      document.getElementById('email').value = c.email || '';
+      document.getElementById('password').value = c.password || '';
+
+      document.getElementById('kontakt_anrede').value = c.kontakt_anrede || '';
+      document.getElementById('kontakt_vorname').value = c.kontakt_vorname || '';
+      document.getElementById('kontakt_nachname').value = c.kontakt_nachname || '';
+      document.getElementById('kontakt_adresse').value = c.kontakt_adresse || '';
+      document.getElementById('kontakt_telefon').value = c.kontakt_telefon || '';
+
+      currentStatuses = data.statuses || [];
+      renderStatusTable();
+
+      await loadDocuments();
+      await loadCustomerFollowups();
+      await loadCustomerNetworkPartners();
+    }
+
+    document.getElementById('customerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        id: document.getElementById('id').value || 0,
+        anrede: document.getElementById('anrede').value,
+        vorname: document.getElementById('vorname').value,
+        nachname: document.getElementById('nachname').value,
+        adresse: document.getElementById('adresse').value,
+        telefon: document.getElementById('telefon').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+        kontakt_anrede: document.getElementById('kontakt_anrede').value,
+        kontakt_vorname: document.getElementById('kontakt_vorname').value,
+        kontakt_nachname: document.getElementById('kontakt_nachname').value,
+        kontakt_adresse: document.getElementById('kontakt_adresse').value,
+        kontakt_telefon: document.getElementById('kontakt_telefon').value
+      };
+
+      const res = await fetch(apiBase + "?action=customer_save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Kundendaten gespeichert.";
+        if (!payload.id || payload.id == 0) {
+          currentCustomerId = data.id;
+          document.getElementById('id').value = data.id;
+          await loadCustomerFollowups();
+          await loadCustomerNetworkPartners();
+        }
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler beim Speichern";
+      }
+    });
+
+    // ---------- Status-Funktionen ----------
+
+    function renderStatusTable() {
+      const tbody = document.getElementById('statusTableBody');
+      tbody.innerHTML = "";
+      currentStatuses.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.status_bezeichnung}</td>
+          <td>${(s.notiz || '').replace(/\n/g, '<br>')}</td>
+          <td>${s.backoffice_username || ''}</td>
+          <td>${s.created_at || ''}</td>
+          <td>${s.updated_at || ''}</td>
+          <td>
+            <button type="button" onclick="editStatus(${s.id})">Bearbeiten</button>
+            <button type="button" class="danger" onclick="deleteStatus(${s.id})">Löschen</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function resetStatusForm() {
+      document.getElementById('status_entry_id').value = "0";
+      document.getElementById('status_notiz').value = "";
+      const select = document.getElementById('status_id');
+      if (select.options.length > 0) {
+        select.selectedIndex = 0;
+      }
+    }
+
+    function editStatus(id) {
+      const entry = currentStatuses.find(s => s.id == id);
+      if (!entry) return;
+      document.getElementById('status_entry_id').value = entry.id;
+      document.getElementById('status_notiz').value = entry.notiz || '';
+      document.getElementById('status_id').value = entry.status_id;
+    }
+
+    async function deleteStatus(id) {
+      if (!confirm("Diesen Status-Eintrag wirklich löschen?")) return;
+      const res = await fetch(apiBase + "?action=customer_status_delete", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadCustomer();
+      } else {
+        alert(data.error || "Fehler beim Löschen");
+      }
+    }
+
+    document.getElementById('statusForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentCustomerId) {
+        alert("Bitte zuerst den Kunden speichern, bevor ein Status angelegt wird.");
+        return;
+      }
+
+      const payload = {
+        id: document.getElementById('status_entry_id').value || 0,
+        customer_id: currentCustomerId,
+        status_id: document.getElementById('status_id').value,
+        notiz: document.getElementById('status_notiz').value
+      };
+
+      const res = await fetch(apiBase + "?action=customer_status_save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Status gespeichert.";
+        resetStatusForm();
+        await loadCustomer();
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler beim Speichern des Status";
+      }
+    });
+
+    // ---------- Netzwerkpartner <-> Kunde ----------
+
+    async function loadCustomerNetworkPartners() {
+      if (!currentCustomerId) {
+        customerNetworkPartners = [];
+        renderCustomerNetworkPartners();
+        return;
+      }
+      const res = await fetch(apiBase + "?action=customer_network_list&customer_id=" + encodeURIComponent(currentCustomerId), {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Netzwerkpartner";
+        return;
+      }
+      customerNetworkPartners = data.partners || [];
+      renderCustomerNetworkPartners();
+    }
+
+    function renderCustomerNetworkPartners() {
+      const container = document.getElementById('customerNetworkContainer');
+      container.innerHTML = "";
+
+      if (!customerNetworkPartners || customerNetworkPartners.length === 0) {
+        const p = document.createElement('p');
+        p.className = "help-text";
+        p.textContent = "Keine Netzwerkpartner zugeordnet.";
+        container.appendChild(p);
+        return;
+      }
+
+      customerNetworkPartners.forEach(p => {
+        const card = document.createElement('div');
+        card.style.border = "1px solid #e5e7eb";
+        card.style.borderRadius = "12px";
+        card.style.padding = "8px 10px";
+        card.style.marginBottom = "8px";
+        card.style.background = "#f9fafb";
+
+        const title = document.createElement('div');
+        title.style.fontWeight = "600";
+        title.textContent = p.name_firma || '';
+        card.appendChild(title);
+
+        if (p.typ_bezeichnung) {
+          const typEl = document.createElement('div');
+          typEl.style.fontSize = "12px";
+          typEl.style.color = "#6b7280";
+          typEl.textContent = p.typ_bezeichnung;
+          card.appendChild(typEl);
+        }
+
+        const lines = [];
+        const person = ((p.vorname || "") + " " + (p.nachname || "")).trim();
+        if (person) lines.push(person);
+        if (p.telefon) lines.push("Tel: " + p.telefon);
+        if (p.email) lines.push("E-Mail: " + p.email);
+        if (p.adresse) lines.push(p.adresse);
+
+        if (lines.length) {
+          const info = document.createElement('div');
+          info.style.marginTop = "4px";
+          info.style.fontSize = "13px";
+          info.innerHTML = lines.map(l => l.replace(/</g, "&lt;")).join("<br>");
+          card.appendChild(info);
+        }
+
+        const actions = document.createElement('div');
+        actions.style.marginTop = "6px";
+        actions.style.textAlign = "right";
+        const btn = document.createElement('button');
+        btn.type = "button";
+        btn.className = "danger";
+        btn.textContent = "Entfernen";
+        btn.onclick = () => removeNetworkPartnerFromCustomer(p.zuordnung_id);
+        actions.appendChild(btn);
+        card.appendChild(actions);
+
+        container.appendChild(card);
+      });
+    }
+
+    async function addNetworkPartnerToCustomer() {
+      if (!currentCustomerId) {
+        alert("Bitte zuerst den Kunden speichern.");
+        return;
+      }
+      const select = document.getElementById('netzwerkpartner_select');
+      const partnerId = parseInt(select.value, 10);
+      if (!partnerId) {
+        alert("Bitte einen Netzwerkpartner auswählen.");
+        return;
+      }
+
+      const res = await fetch(apiBase + "?action=customer_network_add", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({
+          customer_id: currentCustomerId,
+          netzwerkpartner_id: partnerId
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || "Fehler beim Zuordnen des Netzwerkpartners");
+        return;
+      }
+      await loadCustomerNetworkPartners();
+    }
+
+    async function removeNetworkPartnerFromCustomer(zuordnungId) {
+      if (!confirm("Zuordnung wirklich entfernen?")) return;
+
+      const res = await fetch(apiBase + "?action=customer_network_remove", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({
+          id: zuordnungId,
+          customer_id: currentCustomerId
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || "Fehler beim Entfernen der Zuordnung");
+        return;
+      }
+      await loadCustomerNetworkPartners();
+    }
+
+    // ---------- Wiedervorlagen für diesen Kunden ----------
+
+    async function loadCustomerFollowups() {
+      if (!currentCustomerId) {
+        customerFollowups = [];
+        renderCustomerFollowups();
+        return;
+      }
+      const res = await fetch(apiBase + "?action=followup_list&customer_id=" + encodeURIComponent(currentCustomerId), {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Wiedervorlagen";
+        return;
+      }
+      customerFollowups = data.followups || [];
+      renderCustomerFollowups();
+    }
+
+    function renderCustomerFollowups() {
+      const tbody = document.getElementById('fuCustomerTableBody');
+      tbody.innerHTML = "";
+      customerFollowups.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.style.borderLeft = `6px solid ${f.color_code || '#d1d5db'}`;
+        const noteShort = (f.note || "").length > 60
+          ? (f.note || "").substring(0,57) + "..."
+          : (f.note || "");
+        tr.innerHTML = `
+          <td>${f.due_date || ''}</td>
+          <td>${f.typ_bezeichnung || ''}</td>
+          <td>${noteShort}</td>
+          <td>${f.status}</td>
+          <td>
+            <button type="button" onclick="editFollowup(${f.id})">Bearbeiten</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function newFollowupForCurrentCustomer() {
+      if (!currentCustomerId) {
+        alert("Bitte zuerst den Kunden speichern.");
+        return;
+      }
+      window.location.href = "backoffice_followups.html?customer_id=" + encodeURIComponent(currentCustomerId);
+    }
+
+    function editFollowup(id) {
+      window.location.href = "backoffice_followups.html#fu_" + encodeURIComponent(id);
+    }
+
+    // ---------- Dokumente ----------
+
+    async function loadDocuments() {
+      if (!currentCustomerId) {
+        currentDocuments = [];
+        renderDocTable();
+        return;
+      }
+      const res = await fetch(docApiBase + "?action=list&customer_id=" + encodeURIComponent(currentCustomerId), {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('message').textContent = data.error || "Fehler beim Laden der Dokumente";
+        return;
+      }
+      currentDocuments = data.documents || [];
+      renderDocTable();
+    }
+
+    function renderDocTable() {
+      const tbody = document.getElementById('docTableBody');
+      tbody.innerHTML = "";
+      currentDocuments.forEach(d => {
+        const tr = document.createElement('tr');
+        const viewUrl = docApiBase + "?action=view&id=" + encodeURIComponent(d.id);
+        tr.innerHTML = `
+          <td>${d.id}</td>
+          <td>${d.label}</td>
+          <td>${d.filename}</td>
+          <td>${d.backoffice_username || ''}</td>
+          <td>${d.created_at || ''}</td>
+          <td>
+            <a href="${viewUrl}" target="_blank" class="app-button">Öffnen</a>
+            <button type="button" class="danger" onclick="deleteDocument(${d.id})">Löschen</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteDocument(id) {
+      if (!confirm("Dieses Dokument wirklich löschen?")) return;
+      const res = await fetch(docApiBase + "?action=delete", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadDocuments();
+      } else {
+        alert(data.error || "Fehler beim Löschen des Dokuments");
+      }
+    }
+
+    async function uploadDocument(file) {
+      if (!currentCustomerId) {
+        alert("Bitte zuerst den Kunden speichern, bevor Dokumente hochgeladen werden.");
+        return;
+      }
+      if (!file) {
+        alert("Keine Datei ausgewählt.");
+        return;
+      }
+
+      const label = document.getElementById('doc_label').value;
+
+      const formData = new FormData();
+      formData.append('customer_id', currentCustomerId);
+      formData.append('label', label);
+      formData.append('file', file);
+
+      const res = await fetch(docApiBase + "?action=upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('message').textContent = "Dokument hochgeladen.";
+        document.getElementById('fileInput').value = "";
+        await loadDocuments();
+      } else {
+        document.getElementById('message').textContent = data.error || "Fehler beim Upload";
+      }
+    }
+
+    document.getElementById('btnUploadDoc').addEventListener('click', () => {
+      const input = document.getElementById('fileInput');
+      if (input.files && input.files[0]) {
+        uploadDocument(input.files[0]);
+      } else {
+        alert("Bitte eine Datei auswählen oder in das Feld ziehen.");
+      }
+    });
+
+    function base64ToBlob(base64, mime) {
+      const byteChars = atob(base64);
+      const byteNumbers = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteNumbers[i] = byteChars.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: mime || "application/octet-stream" });
+    }
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+
+      const customType = 'application/x-careconnect-attachment';
+      if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes(customType)) {
+        const json = e.dataTransfer.getData(customType);
+        if (json) {
+          try {
+            const att = JSON.parse(json);
+            const blob = base64ToBlob(att.data, att.mime);
+            const file = new File([blob], att.filename || 'attachment', { type: att.mime || 'application/octet-stream' });
+            uploadDocument(file);
+            return;
+          } catch (err) {
+            console.error("Fehler beim Verarbeiten des Anhanges:", err);
+          }
+        }
+      }
+
+      const files = e.dataTransfer.files;
+      if (files && files[0]) {
+        uploadDocument(files[0]);
+      }
+    });
+
+    // ---------- Notizen ----------
+
+    function escapeHtml(str) {
+      return (str || "").replace(/[&<>"']/g, function (c) {
+        return ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[c];
+      });
+    }
+
+    async function loadCustomerNotes() {
+      if (!currentCustomerId) {
+        customerNotes = [];
+        renderCustomerNotes();
+        return;
+      }
+      const res = await fetch(notesApiBase + "?action=list&customer_id=" + encodeURIComponent(currentCustomerId), {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || "Fehler beim Laden der Notizen");
+        return;
+      }
+      customerNotes = data.notes || [];
+      renderCustomerNotes();
+    }
+
+    function renderCustomerNotes() {
+      const list = document.getElementById('notesList');
+      list.innerHTML = "";
+
+      if (!customerNotes.length) {
+        const p = document.createElement('p');
+        p.className = "help-text";
+        p.textContent = "Noch keine Notizen vorhanden.";
+        list.appendChild(p);
+        return;
+      }
+
+      customerNotes.forEach(n => {
+        const card = document.createElement('div');
+        card.className = "card card-ghost";
+        card.style.marginBottom = "8px";
+
+        const subject = escapeHtml(n.subject || '');
+        const content = escapeHtml(n.content || '');
+
+        const metaUser = n.backoffice_username || '';
+        const created  = n.created_at || '';
+        const updated  = n.updated_at || '';
+
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:4px;">
+            <div>
+              <div style="font-weight:600;">${subject}</div>
+              <div class="help-text">
+                Erstellt: ${created}${metaUser ? " · " + metaUser : ""}${updated && updated !== created ? " · Geändert: " + updated : ""}
+              </div>
+            </div>
+            <div style="white-space:nowrap;">
+              <button type="button" class="small" onclick="editNote(${n.id})">Bearbeiten</button>
+              <button type="button" class="small danger" onclick="deleteNote(${n.id})">Löschen</button>
+            </div>
+          </div>
+          <div style="font-size:13px; white-space:pre-wrap;">${content}</div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function resetNoteForm() {
+      document.getElementById('note_id').value = "0";
+      document.getElementById('note_subject').value = "";
+      document.getElementById('note_content').value = "";
+    }
+
+    function openNotesDialog() {
+      if (!currentCustomerId) {
+        alert("Bitte zuerst den Kunden speichern.");
+        return;
+      }
+      const dlg = document.getElementById('notesDialog');
+      dlg.style.display = "flex";
+      resetNoteForm();
+      loadCustomerNotes();
+    }
+
+    function closeNotesDialog() {
+      document.getElementById('notesDialog').style.display = "none";
+    }
+
+    function editNote(id) {
+      const n = customerNotes.find(x => x.id == id);
+      if (!n) return;
+      document.getElementById('note_id').value = n.id;
+      document.getElementById('note_subject').value = n.subject || '';
+      document.getElementById('note_content').value = n.content || '';
+    }
+
+    async function deleteNote(id) {
+      if (!confirm("Diese Notiz wirklich löschen?")) return;
+      const res = await fetch(notesApiBase + "?action=delete", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || "Fehler beim Löschen der Notiz");
+        return;
+      }
+      await loadCustomerNotes();
+      resetNoteForm();
+    }
+
+    document.getElementById('noteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentCustomerId) {
+        alert("Bitte zuerst den Kunden speichern.");
+        return;
+      }
+      const payload = {
+        id: document.getElementById('note_id').value || 0,
+        customer_id: currentCustomerId,
+        subject: document.getElementById('note_subject').value,
+        content: document.getElementById('note_content').value
+      };
+
+      const res = await fetch(notesApiBase + "?action=save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || "Fehler beim Speichern der Notiz");
+        return;
+      }
+      document.getElementById('message').textContent = "Notiz gespeichert.";
+      await loadCustomerNotes();
+      // Formular nach Speichern auf "neu" setzen
+      resetNoteForm();
+    });
+
+    // Buttons fürs Notiz-Modal
+    document.getElementById('btnOpenNotes').addEventListener('click', openNotesDialog);
+    document.getElementById('btnNotesClose').addEventListener('click', closeNotesDialog);
+    document.getElementById('btnNoteNew').addEventListener('click', resetNoteForm);
+
+    // ESC schließt Notiz-Modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const dlg = document.getElementById('notesDialog');
+        if (dlg && dlg.style.display === 'flex') {
+          closeNotesDialog();
+        }
+      }
+    });
+
+    // ---------- Init ----------
+    (async function init() {
+      await loadStatusMaster();
+      await loadNetworkPartnerMaster();
+      await loadCustomer();
+      resetStatusForm();
+    })();
+  </script>
+</body>
+</html>
