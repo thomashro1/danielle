@@ -8,6 +8,32 @@ Das Projekt besteht aus einem PHP-Backoffice, einem mobilen Kundenbereich und ei
 - Customer-API: `https://himi10.de/danielle/customer_api.php`
 - Android-App-Quellcode: `mobile/danielle_customer_app/`
 
+## Git-Workflow
+
+- `main`: produktionsnaher Stand, nur getestete Aenderungen
+- `develop`: Integrationszweig fuer laufende Arbeit
+- Feature-Branches: von `develop` abzweigen, zum Beispiel `feature/backoffice-alerts` oder `fix/customer-upload`
+
+Empfohlener Ablauf:
+
+1. `develop` auschecken und aktualisieren
+2. Feature-Branch von `develop` erstellen
+3. Aenderungen lokal testen
+4. In `develop` mergen
+5. Fuer ein Release `develop` nach `main` mergen und optional einen Tag setzen
+
+Release-Tags:
+
+- Format: `v0.1.0`, `v0.2.0`, `v1.0.0`
+- Beispiel:
+
+```powershell
+git checkout main
+git pull
+git tag v0.1.0
+git push origin v0.1.0
+```
+
 ## Lokale Entwicklung
 
 1. In PowerShell im Projektordner ausfuehren:
