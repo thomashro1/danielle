@@ -1015,7 +1015,7 @@ th.sortable:hover {
   width: 100%;
   display: grid;
   gap: 8px;
-  padding: 16px 18px 17px 22px;
+  padding: 16px 16px 17px 14px;
   border: 1px solid rgba(19, 34, 56, 0.08);
   border-radius: 20px;
   background: #ffffff;
@@ -1023,6 +1023,8 @@ th.sortable:hover {
   text-align: left;
   color: inherit;
   cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
@@ -1079,12 +1081,7 @@ th.sortable:hover {
 }
 
 .bo-alert-item > * {
-  padding-left: 2px;
-}
-
-.bo-alert-item-topline,
-.bo-alert-item-footer {
-  padding-left: 0;
+  min-width: 0;
 }
 
 .bo-alert-item-title {
@@ -1093,6 +1090,8 @@ th.sortable:hover {
   font-weight: 780;
   letter-spacing: -0.025em;
   color: var(--bo-text-main);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bo-alert-item-subtitle {
@@ -1100,16 +1099,28 @@ th.sortable:hover {
   line-height: 1.32;
   font-weight: 700;
   color: #27456a;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bo-alert-item-note {
   font-size: 0.84rem;
   line-height: 1.48;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bo-alert-item-footer {
   font-size: 0.76rem;
   font-weight: 650;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.bo-alert-item-meta,
+.bo-alert-item-footer span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bo-alert-empty {
