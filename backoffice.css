@@ -1015,7 +1015,7 @@ th.sortable:hover {
   width: 100%;
   display: grid;
   gap: 8px;
-  padding: 14px 16px 15px;
+  padding: 16px 18px 17px 22px;
   border: 1px solid rgba(19, 34, 56, 0.08);
   border-radius: 20px;
   background: #ffffff;
@@ -1039,7 +1039,7 @@ th.sortable:hover {
 .bo-alert-item-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 14px;
   flex-wrap: wrap;
 }
@@ -1078,12 +1078,13 @@ th.sortable:hover {
   color: var(--bo-text-muted);
 }
 
-.bo-alert-item-meta,
-.bo-alert-item-age,
-.bo-alert-item-footer span:last-child {
-  margin-left: auto;
-  text-align: right;
-  padding-right: 2px;
+.bo-alert-item > * {
+  padding-left: 2px;
+}
+
+.bo-alert-item-topline,
+.bo-alert-item-footer {
+  padding-left: 0;
 }
 
 .bo-alert-item-title {
