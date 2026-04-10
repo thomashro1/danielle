@@ -956,10 +956,14 @@ th.sortable:hover {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
 }
 
 .bo-alert-column {
   display: grid;
+  grid-template-rows: auto minmax(0, auto);
+  align-content: start;
+  align-items: start;
   gap: 14px;
   padding: 18px;
   border-radius: 24px;
@@ -1009,6 +1013,8 @@ th.sortable:hover {
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  align-items: start;
 }
 
 .bo-alert-item {
