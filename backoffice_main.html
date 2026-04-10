@@ -50,7 +50,7 @@
             </div>
           </div>
 
-          <div class="bo-alert-radar-panel" id="alertRadarPanel">
+          <div class="bo-alert-radar-panel" id="alertRadarPanel" tabindex="-1">
             <div class="bo-alert-radar-summary" id="alertRadarSummary"></div>
 
             <div class="bo-alert-radar-grid">
@@ -240,10 +240,16 @@
       alertRadarExpanded = !!expanded;
       const radar = document.getElementById("alertRadar");
       const toggle = document.getElementById("btnToggleAlerts");
+      const panel = document.getElementById("alertRadarPanel");
       radar.classList.toggle("is-collapsed", !alertRadarExpanded);
       radar.classList.toggle("is-expanded", alertRadarExpanded);
+      document.body.classList.toggle("bo-dashboard-open", alertRadarExpanded);
       toggle.setAttribute("aria-expanded", alertRadarExpanded ? "true" : "false");
       toggle.textContent = alertRadarExpanded ? "Dashboard schliessen" : "Dashboard oeffnen";
+
+      if (alertRadarExpanded && panel) {
+        panel.focus({ preventScroll: true });
+      }
     }
 
     function renderNav() {
