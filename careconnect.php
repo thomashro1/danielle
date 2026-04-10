@@ -711,8 +711,10 @@ switch ($action) {
 
         $customerStatusLimit = intval($_GET['status_limit'] ?? 6);
         $followupLimit = intval($_GET['followup_limit'] ?? 6);
+        $documentLimit = intval($_GET['document_limit'] ?? 6);
         $customerStatusLimit = max(1, min($customerStatusLimit, 12));
         $followupLimit = max(1, min($followupLimit, 12));
+        $documentLimit = max(1, min($documentLimit, 12));
         $followupDays = backoffice_alert_followup_days($pdo);
 
         $customerStatusTotalStmt = $pdo->query("
@@ -786,18 +788,56 @@ switch ($action) {
         }
         unset($followup);
 
+        $documentCountStmt = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM documents d
+            WHERE d.created_by IN ('customer', 'customer-api')
+              AND TIMESTAMPDIFF(DAY, d.created_at, NOW()) <= ?
+        ");
+        $documentCountStmt->execute([$followupDays]);
+        $documentTotal = intval($documentCountStmt->fetchColumn() ?: 0);
+
+        $documentStmt = $pdo->prepare("
+            SELECT d.id,
+                   d.customer_id,
+                   d.label,
+                   d.filename,
+                   d.mime_type,
+                   d.created_at,
+                   d.created_by,
+                   c.anrede,
+                   c.vorname,
+                   c.nachname,
+                   TIMESTAMPDIFF(DAY, d.created_at, NOW()) AS age_days
+            FROM documents d
+            JOIN customers c ON c.id = d.customer_id
+            WHERE d.created_by IN ('customer', 'customer-api')
+              AND TIMESTAMPDIFF(DAY, d.created_at, NOW()) <= ?
+            ORDER BY d.created_at DESC, d.id DESC
+            LIMIT {$documentLimit}
+        ");
+        $documentStmt->execute([$followupDays]);
+        $documents = $documentStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($documents as &$document) {
+            $document['customer_name'] = format_customer_name($document);
+        }
+        unset($document);
+
         echo json_encode([
             "success" => true,
             "generated_at" => date('c'),
             "settings" => [
                 "followup_age_days" => $followupDays,
                 "customer_status_limit" => $customerStatusLimit,
-                "followup_limit" => $followupLimit
+                "followup_limit" => $followupLimit,
+                "document_limit" => $documentLimit
             ],
             "customer_status_total" => $customerStatusTotal,
             "customer_statuses" => $customerStatuses,
             "followup_total" => $followupTotal,
-            "followups" => $followups
+            "followups" => $followups,
+            "document_total" => $documentTotal,
+            "documents" => $documents
         ]);
         exit;
 

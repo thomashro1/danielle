@@ -75,6 +75,17 @@
                 </div>
                 <div id="followupList" class="bo-alert-list"></div>
               </section>
+
+              <section class="bo-alert-column">
+                <div class="bo-alert-column-header">
+                  <div>
+                    <span class="bo-alert-column-kicker">Dokumente</span>
+                    <h3 id="documentColumnHeading">Neu eingegangen in 3 Tagen</h3>
+                  </div>
+                  <span class="bo-alert-column-count" id="documentCount">0</span>
+                </div>
+                <div id="documentList" class="bo-alert-list"></div>
+              </section>
             </div>
           </div>
         </section>
@@ -289,6 +300,7 @@
     function openCustomerAlert(customerId, customerName) {
       const section = getSectionByKey("customers");
       const title = customerName ? `Kunde: ${customerName}` : "Kundendetails";
+      setAlertRadarExpanded(false);
       openWorkspace(
         section,
         "backoffice_customer_detail.html?id=" + encodeURIComponent(customerId),
@@ -298,10 +310,23 @@
 
     function openFollowupAlert(followupId) {
       const section = getSectionByKey("followups");
+      setAlertRadarExpanded(false);
       openWorkspace(
         section,
         "backoffice_followups.html#fu_" + encodeURIComponent(followupId),
         { title: "Wiedervorlagen" }
+      );
+    }
+
+    function openDocumentAlert(customerId, customerName, label) {
+      const section = getSectionByKey("customers");
+      const titleBase = label ? `Dokument: ${label}` : "Dokumente";
+      const title = customerName ? `${titleBase} bei ${customerName}` : titleBase;
+      setAlertRadarExpanded(false);
+      openWorkspace(
+        section,
+        "backoffice_customer_detail.html?id=" + encodeURIComponent(customerId),
+        { title }
       );
     }
 
@@ -314,6 +339,14 @@
           }
           if (element.dataset.alertKind === "followup") {
             openFollowupAlert(element.dataset.followupId);
+            return;
+          }
+          if (element.dataset.alertKind === "document") {
+            openDocumentAlert(
+              element.dataset.customerId,
+              element.dataset.customerName || "",
+              element.dataset.documentLabel || ""
+            );
           }
         });
       });
@@ -383,9 +416,39 @@
       `).join("");
     }
 
+    function renderDocumentItems(items, thresholdDays) {
+      if (!items.length) {
+        return renderEmptyAlertState(`Keine neuen Kundendokumente aus den letzten ${thresholdDays} Tagen.`);
+      }
+
+      return items.map((item) => `
+        <button
+          type="button"
+          class="bo-alert-item bo-alert-item-document"
+          data-alert-kind="document"
+          data-customer-id="${escapeHtml(item.customer_id)}"
+          data-customer-name="${escapeHtml(item.customer_name || "")}"
+          data-document-label="${escapeHtml(item.label || item.filename || "")}"
+        >
+          <div class="bo-alert-item-topline">
+            <span class="bo-alert-item-chip bo-alert-item-chip-doc">Dokument</span>
+            <span class="bo-alert-item-meta">${escapeHtml(formatRelativeTime(item.created_at))}</span>
+          </div>
+          <div class="bo-alert-item-title">${escapeHtml(item.customer_name || "Kunde")}</div>
+          <div class="bo-alert-item-subtitle">${escapeHtml(item.label || item.filename || "Neues Dokument")}</div>
+          <div class="bo-alert-item-note">${escapeHtml(truncateText(item.note || item.filename || "Ohne Bemerkung", 120))}</div>
+          <div class="bo-alert-item-footer">
+            <span>${escapeHtml(formatDateTime(item.created_at))}</span>
+            <span>Dokument oeffnen</span>
+          </div>
+        </button>
+      `).join("");
+    }
+
     function renderAlertSummary(data) {
       const customerShown = Array.isArray(data.customer_statuses) ? data.customer_statuses.length : 0;
       const followupTotal = Number(data.followup_total || 0);
+      const documentTotal = Number(data.document_total || 0);
       const thresholdDays = Number(data.settings?.followup_age_days ?? 3);
       const customerTotal = Number(data.customer_status_total || customerShown);
 
@@ -402,9 +465,9 @@
           <small>seit mindestens ${thresholdDays} Tagen auf neu</small>
         </div>
         <div class="bo-alert-stat">
-          <span>Naechste Aktualisierung</span>
-          <strong>60s</strong>
-          <small>automatisch im Hintergrund</small>
+          <span>Neue Dokumente</span>
+          <strong>${documentTotal}</strong>
+          <small>eingegangen in den letzten ${thresholdDays} Tagen</small>
         </div>
       `;
     }
@@ -412,6 +475,7 @@
     function renderAlertMiniSummary(data) {
       const customerTotal = Number(data.customer_status_total || 0);
       const followupTotal = Number(data.followup_total || 0);
+      const documentTotal = Number(data.document_total || 0);
       const thresholdDays = Number(data.settings?.followup_age_days ?? 3);
       const mini = document.getElementById("alertRadarMini");
       mini.innerHTML = `
@@ -423,22 +487,35 @@
           <strong>${followupTotal}</strong>
           <span>Wiedervorlagen ab ${thresholdDays} Tagen</span>
         </span>
+        <span class="bo-alert-mini-pill bo-alert-mini-pill-doc">
+          <strong>${documentTotal}</strong>
+          <span>Dokumente in ${thresholdDays} Tagen</span>
+        </span>
       `;
     }
 
     function updateAlertHeadline(data) {
       const customerShown = Array.isArray(data.customer_statuses) ? data.customer_statuses.length : 0;
       const followupTotal = Number(data.followup_total || 0);
+      const documentTotal = Number(data.document_total || 0);
       let text = "Die Leiste aktualisiert sich minuetlich und haelt neue Kundenmeldungen sowie offene Wiedervorlagen im Blick.";
 
-      if (customerShown > 0 && followupTotal > 0) {
+      if (customerShown > 0 && followupTotal > 0 && documentTotal > 0) {
+        text = `${customerShown} Kundenmeldungen, ${followupTotal} offene Wiedervorlagen und ${documentTotal} neue Dokumente sind gerade im Radar.`;
+      } else if (customerShown > 0 && followupTotal > 0) {
         text = `${customerShown} frische Kundenmeldungen und ${followupTotal} offene Wiedervorlagen fordern gerade Aufmerksamkeit.`;
+      } else if (customerShown > 0 && documentTotal > 0) {
+        text = `${customerShown} frische Kundenmeldungen und ${documentTotal} neue Dokumente sind gerade eingegangen.`;
+      } else if (followupTotal > 0 && documentTotal > 0) {
+        text = `${followupTotal} offene Wiedervorlagen und ${documentTotal} neue Dokumente liegen aktuell im Fokus.`;
       } else if (customerShown > 0) {
         text = `${customerShown} frische Kundenmeldungen aus dem Kundenfrontend sind gerade eingegangen.`;
       } else if (followupTotal > 0) {
         text = `${followupTotal} offene Wiedervorlagen liegen seit mehreren Tagen im Status neu.`;
+      } else if (documentTotal > 0) {
+        text = `${documentTotal} neue Dokumente aus dem Kundenbereich sind kuerzlich eingegangen.`;
       } else {
-        text = "Aktuell ist alles ruhig. Neue Kundenmeldungen und gealterte Wiedervorlagen tauchen hier automatisch auf.";
+        text = "Aktuell ist alles ruhig. Neue Kundenmeldungen, gealterte Wiedervorlagen und frische Dokumente tauchen hier automatisch auf.";
       }
 
       document.getElementById("alertRadarStatus").textContent = text;
@@ -460,11 +537,15 @@
         const thresholdDays = Number(data.settings?.followup_age_days ?? 3);
         document.getElementById("followupColumnHeading").textContent =
           `Neu seit ${thresholdDays} ${thresholdDays === 1 ? "Tag" : "Tagen"}`;
+        document.getElementById("documentColumnHeading").textContent =
+          `Neu eingegangen in ${thresholdDays} ${thresholdDays === 1 ? "Tag" : "Tagen"}`;
         document.getElementById("customerStatusCount").textContent =
           String(Array.isArray(data.customer_statuses) ? data.customer_statuses.length : 0);
         document.getElementById("followupCount").textContent = String(Number(data.followup_total || 0));
+        document.getElementById("documentCount").textContent = String(Number(data.document_total || 0));
         document.getElementById("customerStatusList").innerHTML = renderCustomerStatusItems(data.customer_statuses || []);
         document.getElementById("followupList").innerHTML = renderFollowupItems(data.followups || [], thresholdDays);
+        document.getElementById("documentList").innerHTML = renderDocumentItems(data.documents || [], thresholdDays);
         document.getElementById("alertRadarUpdated").textContent =
           `Stand ${formatDateTime(data.generated_at) || "jetzt"}`;
         renderAlertSummary(data);
@@ -486,6 +567,8 @@
           renderEmptyAlertState("Statusmeldungen konnten gerade nicht geladen werden.");
         document.getElementById("followupList").innerHTML =
           renderEmptyAlertState("Wiedervorlagen konnten gerade nicht geladen werden.");
+        document.getElementById("documentList").innerHTML =
+          renderEmptyAlertState("Dokumente konnten gerade nicht geladen werden.");
         radar.classList.add("is-error");
       } finally {
         radar.classList.remove("is-loading");
