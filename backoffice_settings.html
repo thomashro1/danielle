@@ -196,18 +196,6 @@
         </div>
 
         <form id="imapForm" class="section-stack">
-          <!-- NEU: Darstellung KIM-Mailclient -->
-          <label>Darstellung KIM-Mailclient
-            <select id="kim_view_mode">
-              <option value="panel">Andock-Panel im Backoffice (V1)</option>
-              <option value="window">Eigenes Fenster / Tab (V2)</option>
-            </select>
-          </label>
-
-          <div class="help-text">
-            V1: KIM wird im Backoffice-Fenster unter der aktuellen Ansicht angezeigt (Drag &amp; Drop zu Kunden möglich).<br>
-            V2: KIM öffnet in einem separaten Fenster/Tab.
-          </div>
 
           <div class="section-inline" style="margin-top:8px;">
             <label>Server
@@ -251,8 +239,6 @@
 
   <script>
     const apiBase = "careconnect.php";
-    const KIM_VIEW_KEY = "kim_view_mode";
-
     function gotoCustomers()  { window.location.href = "backoffice_customers.html"; }
     function gotoSettings()   { window.location.href = "backoffice_settings.html"; }
     function gotoFollowups()  { window.location.href = "backoffice_followups.html"; }
@@ -620,18 +606,6 @@
       }
     });
 
-    // ---------- KIM-Darstellung (localStorage) ----------
-    function loadKimViewModeSetting() {
-      const select = document.getElementById('kim_view_mode');
-      if (!select) return;
-      const value = localStorage.getItem(KIM_VIEW_KEY) || "panel";
-      select.value = value;
-    }
-
-    document.getElementById('kim_view_mode').addEventListener('change', (e) => {
-      localStorage.setItem(KIM_VIEW_KEY, e.target.value);
-    });
-
     // ---------- Init ----------
     (async function init() {
       resetUserForm();
@@ -639,7 +613,6 @@
       resetFuTypeForm();
       resetImapForm();
       resetAlertSettingsForm();
-      loadKimViewModeSetting();
       await loadUsers();
       await loadStatusMaster();
       await loadAlertSettings();

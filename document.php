@@ -25,10 +25,10 @@ try {
 
 // Rollen
 function is_backoffice() {
-    return !empty($_SESSION['backoffice_user_id']);
+    return ($_SESSION['role'] ?? '') === 'backoffice' && !empty($_SESSION['backoffice_user_id']);
 }
 function is_customer() {
-    return !empty($_SESSION['customer_id']);
+    return ($_SESSION['role'] ?? '') === 'customer' && !empty($_SESSION['customer_id']);
 }
 function require_any_auth_json() {
     if (!is_backoffice() && !is_customer()) {
